@@ -1,0 +1,6 @@
+{
+  "name": "React Native Supabase Dev Environment",
+  "description": "A GitHub Codespaces devcontainer environment for React Native and Supabase fullstack development.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
