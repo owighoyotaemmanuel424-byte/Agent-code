@@ -12,6 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "cloudflare:types": "node scripts/generate-cloudflare-types.mjs",
+    "cloudflare:check": "node scripts/check-cloudflare-env.mjs",
     "preview": "opennextjs-cloudflare build && wrangler dev",
     "deploy": "opennextjs-cloudflare build && wrangler deploy"
   },
