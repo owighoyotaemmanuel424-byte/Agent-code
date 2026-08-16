@@ -1,49 +1,100 @@
-# React Native & Supabase Fullstack Development Environment
+# AI Chatbot Platform
 
-A complete, production-ready GitHub Codespaces environment tailored for React Native (mobile) and Supabase backend development.
+Production-oriented AI chatbot platform built with Next.js, Prisma/PostgreSQL, OpenAI, and Cloudflare Workers.
 
-## 🚀 One-Click Codespaces Launch
+## Stack
 
-1. Push this repository to GitHub.
-2. Navigate to your repository on GitHub.
-3. Click the **Code** button.
-4. Select the **Codespaces** tab.
-5. Click **Create codespace on main**.
-6. Wait for the container to build and the `postCreateCommand` to finish setting up your environment.
+- Next.js 15
+- React 19
+- AI SDK 5 with OpenAI
+- Prisma 6 + PostgreSQL
+- Cloudflare Workers / OpenNext
+- Cloudflare R2 for files
+- Cloudflare Vectorize for knowledge retrieval
+- Cloudflare Queues for document processing
+- Cloudflare Rate Limiting for chat protection
 
-## 🛠️ Included Tools
+## Getting started
 
-- **Node.js** (LTS) & **Python** (3.x)
-- **Package Managers**: pnpm, npm, pip
-- **Libraries & CLI**: TypeScript, Prisma, Expo CLI (for React Native)
-- **Docker** support (Docker-in-Docker)
-- Port forwarding configured (3000, 8000, 8081, etc.)
-
-## 📦 Getting Started
-
-This environment automatically installs your dependencies upon creation. To manually install dependencies and start the dev server, run the one-command script:
+### 1. Install dependencies
 
 ```bash
-bash start.sh
+npm install
 ```
 
-## 🔐 Database Credentials (Supabase)
+### 2. Configure environment variables
 
-Never commit your actual database passwords! Create a `.env` file in the root of your project and add your Supabase credentials:
+Create a local `.env` file. Never commit production credentials.
 
 ```env
-# .env
-SUPABASE_URL="https://cetidfekkvnahxfixwwr.supabase.co"
-SUPABASE_ANON_KEY="your-anon-key"
-DATABASE_URL="postgresql://postgres:Owighoyota12345@db.cetidfekkvnahxfixwwr.supabase.co:5432/postgres"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE"
+OPENAI_API_KEY="your-openai-api-key"
+OPENAI_MODEL="gpt-4o-mini"
 ```
 
-## 🔄 Git Automation
-
-The environment is configured to automatically initialize Git on startup if it hasn't been initialized yet.
-
-To quickly commit and push your changes (One-command push):
+### 3. Generate Prisma client
 
 ```bash
-git add . && git commit -m "Auto-commit: update environment" && git push origin main
+npm run db:generate
 ```
+
+### 4. Validate the database schema
+
+```bash
+npx prisma validate
+```
+
+For local development migrations:
+
+```bash
+npm run db:migrate
+```
+
+### 5. Run the application
+
+```bash
+npm run dev
+```
+
+## Cloudflare deployment
+
+The Worker entry point is `cloudflare-worker.ts`, and the OpenNext build output is deployed with Wrangler.
+
+Generate Cloudflare environment types:
+
+```bash
+npm run cloudflare:types
+```
+
+Build and preview locally:
+
+```bash
+npm run preview
+```
+
+Deploy:
+
+```bash
+npm run deploy
+```
+
+Configure production secrets through Cloudflare or your deployment environment. Do not place secrets in `wrangler.toml`, source files, or this README.
+
+Required production secrets include:
+
+- `DATABASE_URL`
+- `OPENAI_API_KEY`
+
+Cloudflare resources referenced by the Worker include the R2 bucket, Vectorize index, document queue, AI binding, and chat rate limiter defined in `wrangler.toml`.
+
+## CI
+
+GitHub Actions validates the Prisma schema, generates the Prisma client, runs TypeScript checking, and builds the production application.
+
+## Security
+
+If a credential is ever committed accidentally, rotate it immediately. Removing it from the latest file alone does not invalidate a credential that may exist in Git history.
+
+## Project status
+
+The platform includes authentication, workspace authorization, RAG/knowledge retrieval, plan-based usage enforcement, and usage ledger recording. Production deployment still requires configuring the actual database and Cloudflare/OpenAI secrets and successfully running CI.
