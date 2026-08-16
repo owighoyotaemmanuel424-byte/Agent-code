@@ -10,6 +10,10 @@ directory = ".open-next/assets"
 binding = "FILES"
 bucket_name = "ai-chatbot-files"
 
+[[vectorize]]
+binding = "KNOWLEDGE_INDEX"
+index_name = "ai-chatbot-knowledge"
+
 [[queues.producers]]
 binding = "DOCUMENT_QUEUE"
 queue = "ai-chatbot-documents"
