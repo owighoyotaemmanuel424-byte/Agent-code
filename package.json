@@ -21,10 +21,10 @@
     "deploy": "opennextjs-cloudflare build && wrangler deploy"
   },
   "dependencies": {
-    "@ai-sdk/openai": "5.0.4",
+    "@ai-sdk/openai": "2.0.117",
     "@opennextjs/cloudflare": "latest",
     "@prisma/client": "6.14.0",
-    "ai": "5.0.4",
+    "ai": "2.0.117",
     "class-variance-authority": "latest",
     "clsx": "latest",
     "convex": "latest",
