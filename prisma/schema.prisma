@@ -11,14 +11,14 @@ enum Role { USER ADMIN }
 enum ConversationStatus { ACTIVE ARCHIVED }
 enum MessageRole { USER ASSISTANT SYSTEM }
 
-a model User {
-  id           String         @id @default(cuid())
-  email        String         @unique
-  name         String?
-  passwordHash String?
-  role         Role           @default(USER)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  passwordHash  String?
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   conversations Conversation[]
 }
 
