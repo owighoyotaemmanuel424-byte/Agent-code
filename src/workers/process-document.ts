@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { processDocumentJob, type DocumentIndexJob } from "./document-indexer";
 import { markFailed, markIndexing, markReady } from "./document-status";
 
@@ -13,7 +12,5 @@ export async function processDocument(job: DocumentIndexJob, env: Parameters<typ
   } catch (error) {
     await markFailed(job.documentId, error);
     throw error;
-  } finally {
-    await prisma.$disconnect().catch(() => undefined);
   }
 }
