@@ -24,7 +24,7 @@
     "@ai-sdk/openai": "2.0.117",
     "@opennextjs/cloudflare": "latest",
     "@prisma/client": "6.14.0",
-    "ai": "2.0.117",
+    "ai": "5.0.225",
     "class-variance-authority": "latest",
     "clsx": "latest",
     "convex": "latest",
