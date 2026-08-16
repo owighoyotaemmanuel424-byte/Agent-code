@@ -1,8 +1,6 @@
 import { processDocument } from "./process-document";
-import type { DocumentIndexJob, DocumentParser } from "./document-indexer";
-import { createPdfParser } from "@/lib/parsers/pdf";
-import { createOfficeParsers } from "@/lib/parsers/office";
-import pdfParse from "pdf-parse";
+import type { DocumentIndexJob } from "./document-indexer";
+import { createDocumentParsers } from "@/lib/parsers/registry";
 
 export interface QueueEnv {
   FILES: R2Bucket;
@@ -10,13 +8,7 @@ export interface QueueEnv {
   OPENAI_API_KEY: string;
 }
 
-const parsers: DocumentParser[] = [
-  createPdfParser(async (bytes) => {
-    const result = await pdfParse(Buffer.from(bytes));
-    return result.text;
-  }),
-  ...createOfficeParsers(),
-];
+const parsers = createDocumentParsers();
 
 export async function consumeDocuments(
   batch: MessageBatch<DocumentIndexJob>,
