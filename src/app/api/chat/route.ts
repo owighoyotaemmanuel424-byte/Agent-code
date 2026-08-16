@@ -7,6 +7,7 @@ import { getCloudflareBindings } from "@/lib/cloudflare-env";
 import { requireUser, requireWorkspaceMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { enforceDailyUsage } from "@/lib/usage/enforce";
+import { recordUsage } from "@/lib/usage/record";
 
 export const runtime = "nodejs";
 
@@ -78,6 +79,13 @@ export async function POST(request: Request) {
       model: openai(parsed.data.model || process.env.OPENAI_MODEL || "gpt-4o-mini"),
       system,
       messages: [...parsed.data.history, { role: "user", content: parsed.data.message }],
+      onFinish: async ({ usage }) => {
+        await recordUsage(prisma, {
+          userId: user.id,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+        });
+      },
     });
 
     return result.toTextStreamResponse();
