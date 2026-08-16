@@ -1,4 +1,4 @@
-import { extractPlainText, supportedTextMime } from "@/lib/document-extract";
+import { extractPlainText } from "@/lib/document-extract";
 import { indexTextDocument } from "@/lib/indexing";
 import type { VectorizeIndex } from "@/lib/vectorize";
 
@@ -11,18 +11,38 @@ export interface DocumentIndexJob {
   ownerId: string;
 }
 
+export interface DocumentParser {
+  supports: (mimeType: string) => boolean;
+  extract: (input: { bytes: ArrayBuffer; mimeType: string; name: string }) => Promise<string>;
+}
+
+export function createDocumentParserRegistry(parsers: DocumentParser[]) {
+  return {
+    async extract(input: { bytes: ArrayBuffer; mimeType: string; name: string }) {
+      const parser = parsers.find((candidate) => candidate.supports(input.mimeType));
+      if (!parser) throw new Error(`No parser configured for ${input.mimeType}`);
+      return parser.extract(input);
+    },
+  };
+}
+
 export async function processDocumentJob(
   job: DocumentIndexJob,
-  env: { FILES: R2Bucket; KNOWLEDGE_INDEX: VectorizeIndex; OPENAI_API_KEY: string },
+  env: {
+    FILES: R2Bucket;
+    KNOWLEDGE_INDEX: VectorizeIndex;
+    OPENAI_API_KEY: string;
+    parsers?: DocumentParser[];
+  },
 ) {
-  if (!supportedTextMime(job.type)) {
-    throw new Error(`Unsupported indexing type: ${job.type}`);
-  }
-
   const object = await env.FILES.get(job.key);
   if (!object) throw new Error(`File not found: ${job.key}`);
 
-  const text = await extractPlainText(object);
+  const bytes = await object.arrayBuffer();
+  const text = env.parsers?.length
+    ? await createDocumentParserRegistry(env.parsers).extract({ bytes, mimeType: job.type, name: job.name })
+    : await extractPlainText(object);
+
   if (!text.trim()) throw new Error("Document contains no indexable text");
 
   return indexTextDocument({
