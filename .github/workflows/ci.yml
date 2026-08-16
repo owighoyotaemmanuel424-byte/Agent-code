@@ -44,6 +44,10 @@ jobs:
         run: npx prisma validate
       - name: Prisma client generation
         run: npx prisma generate
+      - name: Convex code generation
+        run: npx convex codegen
+      - name: Cloudflare type generation
+        run: npm run cloudflare:types
       - name: Typecheck
         run: npm run typecheck
       - name: Convex typecheck
