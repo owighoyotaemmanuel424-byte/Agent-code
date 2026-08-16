@@ -4,7 +4,7 @@ import { consumeDocuments } from "./src/workers/queue-consumer";
 
 export default {
   fetch: openNextWorker.fetch,
-  async queue(batch: MessageBatch, env: CloudflareEnv) {
+  async queue(batch: MessageBatch, env: Env) {
     await consumeDocuments(batch as Parameters<typeof consumeDocuments>[0], env as Parameters<typeof consumeDocuments>[1]);
   },
-} satisfies ExportedHandler<CloudflareEnv>;
+} satisfies ExportedHandler<Env>;
