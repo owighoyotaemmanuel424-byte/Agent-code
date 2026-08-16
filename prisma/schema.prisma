@@ -17,9 +17,21 @@ model User {
   name          String?
   passwordHash  String?
   role          Role           @default(USER)
+  emailVerified DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   conversations Conversation[]
+  sessions      Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
 }
 
 model Conversation {
@@ -34,6 +46,7 @@ model Conversation {
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  Message[]
   @@index([userId, updatedAt])
+  @@index([userId, pinned, updatedAt])
 }
 
 model Message {
