@@ -28,6 +28,7 @@
     "next": "15.5.0",
     "next-themes": "latest",
     "openai": "latest",
+    "pdf-parse": "latest",
     "prisma": "latest",
     "react": "19.1.1",
     "react-dom": "19.1.1",
