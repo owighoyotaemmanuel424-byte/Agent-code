@@ -12,8 +12,9 @@ enum ConversationStatus { ACTIVE ARCHIVED }
 enum MessageRole { USER ASSISTANT SYSTEM }
 enum WorkspaceRole { OWNER ADMIN MEMBER }
 enum KnowledgeStatus { PENDING INDEXING READY FAILED }
+enum Plan { FREE PRO TEAM ENTERPRISE }
 
-author User {
+model User {
   id            String         @id @default(cuid())
   email         String         @unique
   name          String?
@@ -26,6 +27,8 @@ author User {
   sessions      Session[]
   memberships   WorkspaceMember[]
   documents     KnowledgeDocument[] @relation("DocumentOwner")
+  subscription  Subscription?
+  usage         UsageLedger[]
 }
 
 model Session {
@@ -108,4 +111,32 @@ model KnowledgeDocument {
   owner       User            @relation("DocumentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   @@index([workspaceId, status, updatedAt])
   @@index([ownerId, createdAt])
+}
+
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  plan              Plan     @default(FREE)
+  status            String   @default("active")
+  provider          String?
+  providerId        String?
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([plan, status])
+}
+
+model UsageLedger {
+  id          String   @id @default(cuid())
+  userId      String
+  usageDate   DateTime
+  requests    Int      @default(0)
+  inputTokens BigInt   @default(0)
+  outputTokens BigInt  @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, usageDate])
+  @@index([userId, usageDate])
 }
