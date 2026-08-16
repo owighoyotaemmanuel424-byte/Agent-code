@@ -1,4 +1,5 @@
 interface CloudflareEnv {
+  AI: Ai;
   FILES: R2Bucket;
   KNOWLEDGE_INDEX: VectorizeIndex;
   DOCUMENT_QUEUE: Queue;
