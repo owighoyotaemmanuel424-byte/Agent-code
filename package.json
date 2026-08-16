@@ -11,10 +11,13 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "preview": "opennextjs-cloudflare build && wrangler dev",
+    "deploy": "opennextjs-cloudflare build && wrangler deploy"
   },
   "dependencies": {
     "@ai-sdk/openai": "latest",
+    "@opennextjs/cloudflare": "latest",
     "@prisma/client": "latest",
     "ai": "latest",
     "class-variance-authority": "latest",
@@ -33,6 +36,7 @@
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "typescript": "~5.8.2"
+    "typescript": "~5.8.2",
+    "wrangler": "latest"
   }
 }
