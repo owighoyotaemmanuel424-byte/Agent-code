@@ -5,6 +5,8 @@ import { buildGroundedSystemPrompt } from "@/lib/rag/prompt";
 import { buildKnowledgeContext } from "@/lib/knowledge-context";
 import { getCloudflareBindings } from "@/lib/cloudflare-env";
 import { requireUser, requireWorkspaceMember } from "@/lib/auth/session";
+import { prisma } from "@/lib/db/prisma";
+import { enforceDailyUsage } from "@/lib/usage/enforce";
 
 export const runtime = "nodejs";
 
@@ -47,6 +49,15 @@ export async function POST(request: Request) {
     const requestedWorkspaceIds = parsed.data.workspaceIds ?? [];
     for (const workspaceId of requestedWorkspaceIds) {
       await requireWorkspaceMember(workspaceId);
+    }
+
+    const estimatedTokens = Math.ceil((parsed.data.message.length + parsed.data.history.reduce((sum, item) => sum + item.content.length, 0)) / 4);
+    const usage = await enforceDailyUsage(prisma, user.id, estimatedTokens);
+    if (!usage.allowed) {
+      return new Response("Usage limit exceeded", {
+        status: 429,
+        headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+      });
     }
 
     let knowledgeContext = "";
