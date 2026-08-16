@@ -4,6 +4,7 @@ import { z } from "zod";
 import { buildGroundedSystemPrompt } from "@/lib/rag/prompt";
 import { buildKnowledgeContext } from "@/lib/knowledge-context";
 import { getCloudflareBindings } from "@/lib/cloudflare-env";
+import { requireUser, requireWorkspaceMember } from "@/lib/auth/session";
 
 export const runtime = "nodejs";
 
@@ -15,40 +16,58 @@ const requestSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!process.env.OPENAI_API_KEY) {
-    return new Response("OPENAI_API_KEY is not configured", { status: 503 });
-  }
-
-  let input: unknown;
   try {
-    input = await request.json();
-  } catch {
-    return new Response("Invalid JSON", { status: 400 });
-  }
+    await requireUser();
 
-  const parsed = requestSchema.safeParse(input);
-  if (!parsed.success) return new Response("Invalid request", { status: 400 });
+    if (!process.env.OPENAI_API_KEY) {
+      return new Response("OPENAI_API_KEY is not configured", { status: 503 });
+    }
 
-  const bindings = getCloudflareBindings();
-  let knowledgeContext = "";
-  if (bindings?.KNOWLEDGE_INDEX && parsed.data.workspaceIds?.length) {
-    knowledgeContext = await buildKnowledgeContext({
-      index: bindings.KNOWLEDGE_INDEX,
-      apiKey: process.env.OPENAI_API_KEY,
-      query: parsed.data.message,
-      workspaceIds: parsed.data.workspaceIds,
+    let input: unknown;
+    try {
+      input = await request.json();
+    } catch {
+      return new Response("Invalid JSON", { status: 400 });
+    }
+
+    const parsed = requestSchema.safeParse(input);
+    if (!parsed.success) return new Response("Invalid request", { status: 400 });
+
+    const requestedWorkspaceIds = parsed.data.workspaceIds ?? [];
+    for (const workspaceId of requestedWorkspaceIds) {
+      await requireWorkspaceMember(workspaceId);
+    }
+
+    const bindings = getCloudflareBindings();
+    let knowledgeContext = "";
+    if (bindings?.KNOWLEDGE_INDEX && requestedWorkspaceIds.length) {
+      knowledgeContext = await buildKnowledgeContext({
+        index: bindings.KNOWLEDGE_INDEX,
+        apiKey: process.env.OPENAI_API_KEY,
+        query: parsed.data.message,
+        workspaceIds: requestedWorkspaceIds,
+      });
+    }
+
+    const system = buildGroundedSystemPrompt(undefined, knowledgeContext
+      ? [{ id: "knowledge", score: 1, text: knowledgeContext }]
+      : []);
+
+    const result = streamText({
+      model: openai(parsed.data.model || process.env.OPENAI_MODEL || "gpt-4o-mini"),
+      system,
+      messages: [...parsed.data.history, { role: "user", content: parsed.data.message }],
     });
+
+    return result.toTextStreamResponse();
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHENTICATED") {
+      return new Response("Unauthorized", { status: 401 });
+    }
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return new Response("Forbidden", { status: 403 });
+    }
+    console.error("Chat request failed", error);
+    return new Response("Internal server error", { status: 500 });
   }
-
-  const system = buildGroundedSystemPrompt(undefined, knowledgeContext
-    ? [{ id: "knowledge", score: 1, text: knowledgeContext }]
-    : []);
-
-  const result = streamText({
-    model: openai(parsed.data.model || process.env.OPENAI_MODEL || "gpt-4o-mini"),
-    system,
-    messages: [...parsed.data.history, { role: "user", content: parsed.data.message }],
-  });
-
-  return result.toTextStreamResponse();
 }
