@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
       OPENAI_API_KEY: ci-placeholder
@@ -26,13 +30,24 @@ jobs:
           --health-timeout=5s
           --health-retries=5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: npm
-      - run: npm install
-      - run: npx prisma validate
-      - run: npx prisma generate
-      - run: npm run typecheck
-      - run: npm run build
+          node-version: 24
+          package-manager-cache: false
+      - name: Install dependencies
+        run: npm install
+      - name: Prisma schema validation
+        run: npx prisma validate
+      - name: Prisma client generation
+        run: npx prisma generate
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Convex typecheck
+        run: npm run convex:typecheck
+      - name: Cloudflare configuration check
+        run: npm run cloudflare:check
+      - name: Production build
+        run: npm run build
