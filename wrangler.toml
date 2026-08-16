@@ -6,6 +6,9 @@ main = "cloudflare-worker.ts"
 [assets]
 directory = ".open-next/assets"
 
+[ai]
+binding = "AI"
+
 [[r2_buckets]]
 binding = "FILES"
 bucket_name = "ai-chatbot-files"
