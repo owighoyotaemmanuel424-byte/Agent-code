@@ -1,0 +1,23 @@
+name = "ai-chatbot-platform"
+compatibility_date = "2026-08-16"
+compatibility_flags = ["nodejs_compat"]
+main = ".open-next/worker.js"
+
+[assets]
+directory = ".open-next/assets"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "ai-chatbot-files"
+
+[[queues.producers]]
+binding = "DOCUMENT_QUEUE"
+queue = "ai-chatbot-documents"
+
+[[queues.consumers]]
+queue = "ai-chatbot-documents"
+max_batch_size = 10
+max_batch_timeout = 30
+
+[vars]
+APP_ENV = "production"
