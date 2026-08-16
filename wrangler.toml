@@ -26,5 +26,13 @@ queue = "ai-chatbot-documents"
 max_batch_size = 10
 max_batch_timeout = 30
 
+[[ratelimits]]
+name = "CHAT_RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
 [vars]
 APP_ENV = "production"
