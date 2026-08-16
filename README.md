@@ -1,60 +1,50 @@
 # AI Chatbot Platform
 
-Production-oriented AI chatbot platform built with Next.js, Prisma/PostgreSQL, OpenAI, and Cloudflare Workers.
+Production-oriented AI chatbot platform built with Next.js, OpenAI, Cloudflare Workers, and Convex.
 
 ## Stack
 
 - Next.js 15
 - React 19
 - AI SDK 5 with OpenAI
-- Prisma 6 + PostgreSQL
+- Convex for application data, usage, workspaces, conversations, messages, subscriptions, and sessions
 - Cloudflare Workers / OpenNext
 - Cloudflare R2 for files
 - Cloudflare Vectorize for knowledge retrieval
 - Cloudflare Queues for document processing
 - Cloudflare Rate Limiting for chat protection
 
-## Getting started
+## Convex migration
 
-### 1. Install dependencies
+The project is migrating from Prisma/PostgreSQL to Convex in phases so authentication and production traffic are not broken during the transition.
+
+The new Convex schema lives in `convex/schema.ts` and mirrors the existing application entities. `convex/authBridge.ts` provides a server-side migration bridge for the existing session system, while `convex/usage.ts` provides the atomic usage-ledger mutation.
+
+Convex's Next.js authentication support is still evolving, so the current migration preserves the application's existing authentication boundary while moving persistence behind a controlled server-side bridge. See the Convex Next.js authentication documentation before switching the user-facing auth provider.
+
+### Required Convex variables
+
+```env
+NEXT_PUBLIC_CONVEX_URL="https://your-deployment.convex.cloud"
+CONVEX_SERVICE_KEY="your-server-only-service-secret"
+```
+
+`NEXT_PUBLIC_CONVEX_URL` is public. `CONVEX_SERVICE_KEY` is server-only and must never be exposed to browser code.
+
+### Development
 
 ```bash
 npm install
+npm run convex:dev
 ```
 
-### 2. Configure environment variables
-
-Create a local `.env` file. Never commit production credentials.
-
-```env
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE"
-OPENAI_API_KEY="your-openai-api-key"
-OPENAI_MODEL="gpt-4o-mini"
-```
-
-### 3. Generate Prisma client
+### Production backend deployment
 
 ```bash
-npm run db:generate
+npm run convex:deploy
 ```
 
-### 4. Validate the database schema
-
-```bash
-npx prisma validate
-```
-
-For local development migrations:
-
-```bash
-npm run db:migrate
-```
-
-### 5. Run the application
-
-```bash
-npm run dev
-```
+Convex deployment validates the schema, generates the Convex client code, and pushes functions and schema to the selected deployment.
 
 ## Cloudflare deployment
 
@@ -82,19 +72,27 @@ Configure production secrets through Cloudflare or your deployment environment. 
 
 Required production secrets include:
 
-- `DATABASE_URL`
 - `OPENAI_API_KEY`
+- `AUTH_SECRET`
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_CONVEX_URL`
+- `CONVEX_SERVICE_KEY`
+
+The legacy `DATABASE_URL` remains required only until the Prisma-to-Convex cutover is completed.
 
 Cloudflare resources referenced by the Worker include the R2 bucket, Vectorize index, document queue, AI binding, and chat rate limiter defined in `wrangler.toml`.
 
 ## CI
 
-GitHub Actions validates the Prisma schema, generates the Prisma client, runs TypeScript checking, and builds the production application.
+GitHub Actions should validate both the legacy Prisma compatibility layer and the Convex schema/code generation until the database cutover is complete.
 
 ## Security
 
 If a credential is ever committed accidentally, rotate it immediately. Removing it from the latest file alone does not invalidate a credential that may exist in Git history.
 
-## Project status
+## Migration status
 
-The platform includes authentication, workspace authorization, RAG/knowledge retrieval, plan-based usage enforcement, and usage ledger recording. Production deployment still requires configuring the actual database and Cloudflare/OpenAI secrets and successfully running CI.
+- Phase 1: Convex schema and migration bridge added.
+- Phase 2: Move authentication, workspace authorization, conversations, documents, subscriptions, and usage reads/writes to Convex.
+- Phase 3: Remove Prisma/PostgreSQL dependencies and `DATABASE_URL`.
+- Phase 4: Deploy Convex production backend and run Cloudflare smoke tests.
