@@ -25,6 +25,7 @@
     "class-variance-authority": "latest",
     "clsx": "latest",
     "lucide-react": "latest",
+    "mammoth": "latest",
     "next": "15.5.0",
     "next-themes": "latest",
     "openai": "latest",
@@ -33,6 +34,7 @@
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "tailwind-merge": "latest",
+    "xlsx": "latest",
     "zod": "latest"
   },
   "devDependencies": {
