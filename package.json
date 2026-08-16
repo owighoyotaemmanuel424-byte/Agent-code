@@ -18,10 +18,10 @@
     "deploy": "opennextjs-cloudflare build && wrangler deploy"
   },
   "dependencies": {
-    "@ai-sdk/openai": "latest",
+    "@ai-sdk/openai": "5.0.4",
     "@opennextjs/cloudflare": "latest",
-    "@prisma/client": "latest",
-    "ai": "latest",
+    "@prisma/client": "6.14.0",
+    "ai": "5.0.4",
     "class-variance-authority": "latest",
     "clsx": "latest",
     "lucide-react": "latest",
@@ -30,7 +30,7 @@
     "next-themes": "latest",
     "openai": "latest",
     "pdf-parse": "latest",
-    "prisma": "latest",
+    "prisma": "6.14.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "tailwind-merge": "latest",
