@@ -17,7 +17,18 @@ const requestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    await requireUser();
+    const user = await requireUser();
+    const bindings = getCloudflareBindings();
+
+    if (bindings?.CHAT_RATE_LIMITER) {
+      const decision = await bindings.CHAT_RATE_LIMITER.limit({ key: `user:${user.id}` });
+      if (!decision.success) {
+        return new Response("Too many chat requests", {
+          status: 429,
+          headers: { "Retry-After": "60", "Cache-Control": "no-store" },
+        });
+      }
+    }
 
     if (!process.env.OPENAI_API_KEY) {
       return new Response("OPENAI_API_KEY is not configured", { status: 503 });
@@ -38,7 +49,6 @@ export async function POST(request: Request) {
       await requireWorkspaceMember(workspaceId);
     }
 
-    const bindings = getCloudflareBindings();
     let knowledgeContext = "";
     if (bindings?.KNOWLEDGE_INDEX && requestedWorkspaceIds.length) {
       knowledgeContext = await buildKnowledgeContext({
