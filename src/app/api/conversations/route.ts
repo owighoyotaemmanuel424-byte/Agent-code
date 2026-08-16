@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma";
-import { verifySessionToken } from "@/src/lib/session";
+import { prisma } from "@/lib/prisma";
+import { verifySessionToken } from "@/lib/session";
 
 function userIdFromRequest(request: Request) {
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
