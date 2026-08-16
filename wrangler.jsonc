@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ai-chatbot-platform",
+  "compatibility_date": "2026-08-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "r2_buckets": [
+    { "binding": "FILES_BUCKET", "bucket_name": "ai-chatbot-files" }
+  ],
+  "queues": {
+    "producers": [
+      { "binding": "DOCUMENT_QUEUE", "queue": "ai-chatbot-document-processing" }
+    ],
+    "consumers": [
+      { "queue": "ai-chatbot-document-processing", "max_batch_size": 10, "max_batch_timeout": 30 }
+    ]
+  },
+  "vars": {
+    "NEXT_PUBLIC_APP_URL": "https://chat.example.com"
+  }
+}

@@ -1,0 +1,38 @@
+name = "ai-chatbot-platform"
+compatibility_date = "2026-08-16"
+compatibility_flags = ["nodejs_compat"]
+main = "cloudflare-worker.ts"
+
+[assets]
+directory = ".open-next/assets"
+
+[ai]
+binding = "AI"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "ai-chatbot-files"
+
+[[vectorize]]
+binding = "KNOWLEDGE_INDEX"
+index_name = "ai-chatbot-knowledge"
+
+[[queues.producers]]
+binding = "DOCUMENT_QUEUE"
+queue = "ai-chatbot-documents"
+
+[[queues.consumers]]
+queue = "ai-chatbot-documents"
+max_batch_size = 10
+max_batch_timeout = 30
+
+[[ratelimits]]
+name = "CHAT_RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
+[vars]
+APP_ENV = "production"
