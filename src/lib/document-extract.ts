@@ -7,13 +7,11 @@ const BINARY_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ]);
 
-export async function extractPlainText(object: R2Object): Promise<string> {
+export async function extractPlainText(object: R2ObjectBody): Promise<string> {
   const type = object.httpMetadata?.contentType ?? "";
 
   if (TEXT_TYPES.has(type)) {
-    const body = object.body;
-    if (!body) throw new Error("R2 object has no readable body");
-    return new TextDecoder().decode(await new Response(body).arrayBuffer());
+    return new TextDecoder().decode(await object.arrayBuffer());
   }
 
   if (IMAGE_TYPES.has(type)) {
