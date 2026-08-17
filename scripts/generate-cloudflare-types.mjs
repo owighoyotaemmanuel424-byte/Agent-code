@@ -1,4 +1,7 @@
+import { mkdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+
+mkdirSync("src/generated", { recursive: true });
 
 const result = spawnSync("npx", ["wrangler", "types", "src/generated/cloudflare-env.d.ts"], {
   stdio: "inherit",
