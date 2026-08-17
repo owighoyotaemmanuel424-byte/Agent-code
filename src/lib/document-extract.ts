@@ -9,9 +9,12 @@ const BINARY_TYPES = new Set([
 
 export async function extractPlainText(object: R2Object): Promise<string> {
   const type = object.httpMetadata?.contentType ?? "";
-  const bytes = object.body ? await new Response(object.body).arrayBuffer() : new ArrayBuffer(0);
 
-  if (TEXT_TYPES.has(type)) return new TextDecoder().decode(bytes);
+  if (TEXT_TYPES.has(type)) {
+    const body = object.body;
+    if (!body) throw new Error("R2 object has no readable body");
+    return new TextDecoder().decode(await new Response(body).arrayBuffer());
+  }
 
   if (IMAGE_TYPES.has(type)) {
     throw new Error(`Image extraction requires OCR: ${type}`);
