@@ -26,13 +26,12 @@ export function createWorkersAiOcrParser(ai: Pick<Ai, "run">) {
       max_tokens: 4096,
     });
 
+    const output = result as unknown as { response?: unknown };
     const text = typeof result === "string"
       ? result
-      : typeof result?.response === "string"
-        ? result.response
-        : typeof result?.result === "string"
-          ? result.result
-          : "";
+      : typeof output?.response === "string"
+        ? output.response
+        : "";
 
     if (!text.trim()) throw new Error("OCR returned no text");
     return text;
