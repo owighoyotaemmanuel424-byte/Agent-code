@@ -38,6 +38,7 @@
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "tailwind-merge": "latest",
+    "tailwindcss": "4.1.13",
     "xlsx": "latest",
     "zod": "latest"
   },
