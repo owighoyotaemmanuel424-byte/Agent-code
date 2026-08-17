@@ -9,13 +9,10 @@ const BINARY_TYPES = new Set([
 
 export async function extractPlainText(object: R2Object): Promise<string> {
   const type = object.httpMetadata?.contentType ?? "";
-  const bytes = await object.arrayBuffer();
+  const bytes = object.body ? await new Response(object.body).arrayBuffer() : new ArrayBuffer(0);
 
   if (TEXT_TYPES.has(type)) return new TextDecoder().decode(bytes);
 
-  // Binary parsers are intentionally isolated from the Worker core. The
-  // extraction queue can route these formats to a parser runtime without
-  // treating arbitrary binary bytes as UTF-8 text.
   if (IMAGE_TYPES.has(type)) {
     throw new Error(`Image extraction requires OCR: ${type}`);
   }
