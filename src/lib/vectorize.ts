@@ -5,7 +5,7 @@ export interface VectorizeMatch {
 }
 
 export interface VectorizeIndex {
-  upsert(vectors: Array<{ id: string; values: number[]; metadata?: Record<string, unknown> }>): Promise<unknown>;
+  upsert(vectors: any[]): Promise<any>;
   query(values: number[], options?: { topK?: number; returnMetadata?: boolean }): Promise<{ matches: VectorizeMatch[] }>;
 }
 
