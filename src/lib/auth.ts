@@ -1,7 +1,8 @@
-import crypto from 'node:crypto';
+import nodeCrypto from 'node:crypto';
 import { cookies } from 'next/headers';
 import { prisma } from './prisma';
 
+const crypto = nodeCrypto as any;
 const SESSION_COOKIE = 'ai_session';
 const SESSION_DAYS = 30;
 
