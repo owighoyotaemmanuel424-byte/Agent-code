@@ -14,7 +14,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
-    "convex:typecheck": "convex deploy --dry-run --typecheck",
+    "convex:typecheck": "convex deploy --dry-run --typecheck enable",
     "cloudflare:types": "node scripts/generate-cloudflare-types.mjs",
     "cloudflare:check": "node scripts/check-cloudflare-env.mjs",
     "preview": "opennextjs-cloudflare build && wrangler dev",
