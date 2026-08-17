@@ -17,6 +17,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
       OPENAI_API_KEY: ci-placeholder
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
     services:
       postgres:
         image: postgres:16
