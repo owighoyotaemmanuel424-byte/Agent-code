@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 
 function assertServiceKey(key: string) {
@@ -7,15 +7,10 @@ function assertServiceKey(key: string) {
   }
 }
 
-export const upsertUser = mutation({
+export const upsertUser = mutationGeneric({
   args: {
-    serviceKey: v.string(),
-    legacyId: v.string(),
-    email: v.string(),
-    name: v.optional(v.string()),
-    passwordHash: v.optional(v.string()),
-    role: v.union(v.literal("USER"), v.literal("ADMIN")),
-    emailVerified: v.optional(v.number()),
+    serviceKey: v.string(), legacyId: v.string(), email: v.string(), name: v.optional(v.string()),
+    passwordHash: v.optional(v.string()), role: v.union(v.literal("USER"), v.literal("ADMIN")), emailVerified: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     assertServiceKey(args.serviceKey);
@@ -29,7 +24,7 @@ export const upsertUser = mutation({
   },
 });
 
-export const createSession = mutation({
+export const createSession = mutationGeneric({
   args: { serviceKey: v.string(), legacyUserId: v.string(), tokenHash: v.string(), expiresAt: v.number() },
   handler: async (ctx, args) => {
     assertServiceKey(args.serviceKey);
@@ -40,7 +35,7 @@ export const createSession = mutation({
   },
 });
 
-export const getSessionUser = query({
+export const getSessionUser = queryGeneric({
   args: { serviceKey: v.string(), tokenHash: v.string() },
   handler: async (ctx, args) => {
     assertServiceKey(args.serviceKey);
