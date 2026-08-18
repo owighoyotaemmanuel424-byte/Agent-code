@@ -15,7 +15,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
-    "convex:typecheck": "convex deploy --dry-run --typecheck disable",
+    "convex:typecheck": "tsc -p convex/tsconfig.json --noEmit",
     "cloudflare:types": "node scripts/generate-cloudflare-types.mjs",
     "cloudflare:check": "node scripts/check-cloudflare-env.mjs",
     "preview": "opennextjs-cloudflare build && wrangler dev",
@@ -40,7 +40,7 @@
     "react-dom": "19.1.1",
     "tailwind-merge": "latest",
     "tailwindcss": "4.1.13",
-    "xlsx": "latest",
+    "xlsx": "0.18.5",
     "zod": "4.4.3"
   },
   "devDependencies": {
