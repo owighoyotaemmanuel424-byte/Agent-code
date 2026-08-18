@@ -2,9 +2,7 @@ import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 
 function assertServiceKey(key: string) {
-  if (!process.env.CONVEX_SERVICE_KEY || key !== process.env.CONVEX_SERVICE_KEY) {
-    throw new Error("UNAUTHORIZED_SERVICE");
-  }
+  if (!process.env.CONVEX_SERVICE_KEY || key !== process.env.CONVEX_SERVICE_KEY) throw new Error("UNAUTHORIZED_SERVICE");
 }
 
 export const upsertUser = mutationGeneric({
