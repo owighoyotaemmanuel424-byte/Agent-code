@@ -11,6 +11,7 @@ const config: OpenNextConfig = {
       tagCache: "dummy",
     },
   },
+  edgeExternals: ["node:crypto"],
 };
 
 export default config;
