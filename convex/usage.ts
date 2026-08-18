@@ -13,7 +13,11 @@ export const recordUsage = mutationGeneric({
     if (!user) throw new Error("USER_NOT_FOUND");
     const day = new Date();
     const usageDate = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate());
-    const existing = await ctx.db.query("usageLedger").withIndex("by_user_date", q => q.eq("userId", user._id).eq("usageDate", usageDate)).unique();
+    const existing = await ctx.db
+      .query("usageLedger")
+      .withIndex("by_user_date", q => q.eq("userId", user._id))
+      .filter(q => q.eq(q.field("usageDate"), usageDate))
+      .unique();
     const inputTokens = Math.max(0, Math.floor(args.inputTokens));
     const outputTokens = Math.max(0, Math.floor(args.outputTokens));
     const now = Date.now();
