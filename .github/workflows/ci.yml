@@ -56,4 +56,4 @@ jobs:
       - name: Cloudflare configuration check
         run: npm run cloudflare:check
       - name: Production build
-        run: npm run build
+        run: npm run build:cloudflare
