@@ -4,8 +4,9 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "next dev",
-    "build": "opennextjs-cloudflare build",
+    "build": "next build",
     "build:next": "next build",
+    "build:cloudflare": "opennextjs-cloudflare build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -18,8 +19,8 @@
     "convex:typecheck": "tsc -p convex/tsconfig.json --noEmit",
     "cloudflare:types": "node scripts/generate-cloudflare-types.mjs",
     "cloudflare:check": "node scripts/check-cloudflare-env.mjs",
-    "preview": "opennextjs-cloudflare build && wrangler dev",
-    "deploy": "opennextjs-cloudflare build && wrangler deploy"
+    "preview": "npm run build:cloudflare && wrangler dev",
+    "deploy": "npm run build:cloudflare && wrangler deploy"
   },
   "dependencies": {
     "@ai-sdk/openai": "2.0.117",
