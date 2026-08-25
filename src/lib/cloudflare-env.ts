@@ -1,3 +1,9 @@
+import type {
+  R2Bucket,
+  Queue,
+  VectorizeIndex,
+} from "@cloudflare/workers-types";
+
 export interface RateLimiterBinding {
   limit(options: { key: string }): Promise<{ success: boolean }>;
 }
