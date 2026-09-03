@@ -1,98 +1,155 @@
 # AI Chatbot Platform
 
-Production-oriented AI chatbot platform built with Next.js, OpenAI, Cloudflare Workers, and Convex.
+Production-oriented AI chatbot platform built with Next.js, OpenAI, Cloudflare Workers/OpenNext, and Convex.
 
 ## Stack
 
-- Next.js 15
+- Next.js 15 / App Router
 - React 19
 - AI SDK 5 with OpenAI
 - Convex for application data, usage, workspaces, conversations, messages, subscriptions, and sessions
-- Cloudflare Workers / OpenNext
+- Cloudflare Workers with OpenNext
 - Cloudflare R2 for files
 - Cloudflare Vectorize for knowledge retrieval
 - Cloudflare Queues for document processing
 - Cloudflare Rate Limiting for chat protection
 
-## Convex migration
+## Cloudflare deployment
 
-The project is migrating from Prisma/PostgreSQL to Convex in phases so authentication and production traffic are not broken during the transition.
+The production target is **Cloudflare Workers** using the OpenNext adapter. Cloudflare currently recommends vinext for new Next.js projects, but OpenNext remains a supported path for existing OpenNext applications such as this project.
 
-The new Convex schema lives in `convex/schema.ts` and mirrors the existing application entities. `convex/authBridge.ts` provides a server-side migration bridge for the existing session system, while `convex/usage.ts` provides the atomic usage-ledger mutation.
+The repository's `wrangler.jsonc` is the source of truth for the Worker configuration and bindings.
 
-Convex's Next.js authentication support is still evolving, so the current migration preserves the application's existing authentication boundary while moving persistence behind a controlled server-side bridge. See the Convex Next.js authentication documentation before switching the user-facing auth provider.
+### Build locally
 
-### Required Convex variables
-
-```env
-NEXT_PUBLIC_CONVEX_URL="https://your-deployment.convex.cloud"
-CONVEX_SERVICE_KEY="your-server-only-service-secret"
+```bash
+npm install
+npm run build:next
 ```
 
-`NEXT_PUBLIC_CONVEX_URL` is public. `CONVEX_SERVICE_KEY` is server-only and must never be exposed to browser code.
+### Build the Cloudflare Worker
 
-### Development
+```bash
+npm run build:cloudflare
+```
+
+This runs the OpenNext Cloudflare build and produces the `.open-next` deployment output.
+
+### Preview in the Workers runtime
+
+```bash
+npm run preview
+```
+
+### Deploy
+
+```bash
+npm run deploy
+```
+
+Cloudflare Workers Builds should use:
+
+- **Build command:** `npx @opennextjs/cloudflare build`
+- **Deploy command:** `npx @opennextjs/cloudflare deploy`
+- **Production branch:** `main`
+
+The repository scripts wrap the same OpenNext build and Wrangler deployment flow.
+
+## Cloudflare Workers Builds setup
+
+Connect this GitHub repository to Cloudflare Workers Builds and use `main` as the production branch.
+
+Configure the following under the Cloudflare project's **Build variables and secrets**. Never commit secret values to GitHub.
+
+### Required variables and secrets
+
+```text
+NEXT_PUBLIC_APP_URL=https://YOUR-WORKERS-DOMAIN
+NEXT_PUBLIC_CONVEX_URL=https://YOUR-CONVEX-DEPLOYMENT.convex.cloud
+OPENAI_API_KEY=<secret>
+AUTH_SECRET=<secret>
+CONVEX_SERVICE_KEY=<server-only secret>
+CONVEX_DEPLOY_KEY=<Convex production deploy key>
+```
+
+`NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_CONVEX_URL` are public configuration values. `OPENAI_API_KEY`, `AUTH_SECRET`, `CONVEX_SERVICE_KEY`, and `CONVEX_DEPLOY_KEY` are secrets and must remain server-side.
+
+`CONVEX_DEPLOY_KEY` is used by non-interactive CI/CD environments to deploy Convex functions and schema. Create a production-scoped deploy key in Convex and add it to Cloudflare as a secret rather than placing it in source control.
+
+The legacy `DATABASE_URL` remains required only while the Prisma-to-Convex migration is incomplete. Once all application persistence has moved to Convex, Prisma/PostgreSQL and `DATABASE_URL` can be removed.
+
+## Cloudflare bindings
+
+The Worker configuration defines the resources used by the application, including:
+
+- R2 file storage
+- Vectorize knowledge index
+- Document processing Queue
+- Workers AI
+- Chat rate limiting
+- Static assets/OpenNext output
+
+After changing bindings, regenerate Cloudflare types:
+
+```bash
+npm run cloudflare:types
+```
+
+Validate the binding/configuration contract with:
+
+```bash
+npm run cloudflare:check
+```
+
+## Convex
+
+The Convex schema is in `convex/schema.ts`. The migration is intentionally phased so the existing authentication boundary can remain operational while persistence moves to Convex.
+
+### Local development
 
 ```bash
 npm install
 npm run convex:dev
 ```
 
-### Production backend deployment
+### Deploy Convex production
 
 ```bash
 npm run convex:deploy
 ```
 
-Convex deployment validates the schema, generates the Convex client code, and pushes functions and schema to the selected deployment.
+For CI/CD, configure `CONVEX_DEPLOY_KEY` in the hosting environment. Convex uses that variable to select the deployment associated with the deploy key and run non-interactively.
 
-## Cloudflare deployment
+## CI checks
 
-The Worker entry point is `cloudflare-worker.ts`, and the OpenNext build output is deployed with Wrangler.
-
-Generate Cloudflare environment types:
+Recommended deployment checks:
 
 ```bash
 npm run cloudflare:types
+npm run cloudflare:check
+npm run typecheck
+npm run convex:typecheck
+npm run build:next
+npm run build:cloudflare
 ```
-
-Build and preview locally:
-
-```bash
-npm run preview
-```
-
-Deploy:
-
-```bash
-npm run deploy
-```
-
-Configure production secrets through Cloudflare or your deployment environment. Do not place secrets in `wrangler.toml`, source files, or this README.
-
-Required production secrets include:
-
-- `OPENAI_API_KEY`
-- `AUTH_SECRET`
-- `NEXT_PUBLIC_APP_URL`
-- `NEXT_PUBLIC_CONVEX_URL`
-- `CONVEX_SERVICE_KEY`
-
-The legacy `DATABASE_URL` remains required only until the Prisma-to-Convex cutover is completed.
-
-Cloudflare resources referenced by the Worker include the R2 bucket, Vectorize index, document queue, AI binding, and chat rate limiter defined in `wrangler.toml`.
-
-## CI
-
-GitHub Actions should validate both the legacy Prisma compatibility layer and the Convex schema/code generation until the database cutover is complete.
-
-## Security
-
-If a credential is ever committed accidentally, rotate it immediately. Removing it from the latest file alone does not invalidate a credential that may exist in Git history.
 
 ## Migration status
 
-- Phase 1: Convex schema and migration bridge added.
-- Phase 2: Move authentication, workspace authorization, conversations, documents, subscriptions, and usage reads/writes to Convex.
-- Phase 3: Remove Prisma/PostgreSQL dependencies and `DATABASE_URL`.
-- Phase 4: Deploy Convex production backend and run Cloudflare smoke tests.
+- **Phase 1:** Convex schema and migration bridge added.
+- **Phase 2:** Move authentication, workspace authorization, conversations, documents, subscriptions, and usage reads/writes to Convex.
+- **Phase 3:** Remove Prisma/PostgreSQL dependencies and `DATABASE_URL`.
+- **Phase 4:** Deploy Convex production backend and complete Cloudflare production smoke tests.
+
+## Security
+
+If a credential is ever committed accidentally, rotate it immediately. Removing it from the latest file does not invalidate a credential that may still exist in Git history.
+
+Do not put API keys, deploy keys, authentication secrets, or service secrets in `README.md`, `wrangler.jsonc`, source files, or committed `.env` files.
+
+## References
+
+- Cloudflare Next.js / Workers: https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/
+- Cloudflare OpenNext adapter: https://developers.cloudflare.com/workers/framework-guides/web-apps/opennext/
+- OpenNext for Cloudflare: https://opennext.js.org/cloudflare/
+- Convex deployment: https://docs.convex.dev/cli/reference/deploy
+- Convex deploy keys: https://docs.convex.dev/cli/deploy-key-types
