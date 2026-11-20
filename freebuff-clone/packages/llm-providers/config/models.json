@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "id": "deepseek-chat",
+      "provider": "deepseek",
+      "displayName": "DeepSeek Chat",
+      "contextWindow": 65536,
+      "maxOutputTokens": 8192,
+      "planTiers": ["free", "paid"]
+    },
+    {
+      "id": "gpt-4o-mini",
+      "provider": "openai",
+      "displayName": "GPT-4o mini",
+      "contextWindow": 128000,
+      "maxOutputTokens": 16384,
+      "planTiers": ["free", "paid"]
+    },
+    {
+      "id": "claude-sonnet-4-20250514",
+      "provider": "anthropic",
+      "displayName": "Claude Sonnet 4",
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "planTiers": ["paid"]
+    }
+  ]
+}

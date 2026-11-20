@@ -1,0 +1,16 @@
+{
+  "name": "@freebuff/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/server.ts",
+    "package": "bun run scripts/package.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@freebuff/ads": "workspace:*",
+    "@freebuff/sdk": "workspace:*",
+    "@freebuff/shared": "workspace:*"
+  }
+}

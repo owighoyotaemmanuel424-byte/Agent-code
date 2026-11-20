@@ -1,0 +1,30 @@
+{
+  "name": "@freebuff/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "freebuff": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@freebuff/ads": "workspace:*",
+    "@freebuff/agent-runtime": "workspace:*",
+    "@freebuff/auth": "workspace:*",
+    "@freebuff/code-map": "workspace:*",
+    "@freebuff/llm-providers": "workspace:*",
+    "@freebuff/quota": "workspace:*",
+    "@freebuff/shared": "workspace:*",
+    "@opentui/core": "^0.9.4",
+    "@opentui/react": "^0.9.4",
+    "@tanstack/react-query": "^5.108.1",
+    "commander": "^15.1.0",
+    "react": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0"
+  }
+}

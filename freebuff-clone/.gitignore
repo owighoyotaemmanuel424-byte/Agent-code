@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+.next/
+.open-next/
+.wrangler/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example

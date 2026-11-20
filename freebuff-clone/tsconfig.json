@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["bun"],
+    "baseUrl": ".",
+    "paths": {
+      "@freebuff/shared": ["./packages/shared/src/index.ts"],
+      "@freebuff/*": ["./packages/*/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.tsx",
+    "apps/*/src/**/*.ts",
+    "apps/*/src/**/*.tsx",
+    "tests/**/*.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": ["node_modules", "**/node_modules/**", "**/dist/**"]
+}

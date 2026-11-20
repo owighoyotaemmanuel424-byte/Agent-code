@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "ads": [
+    {
+      "id": "ad-observability",
+      "advertiser": "Trace Co",
+      "headline": "See every agent run in one trace",
+      "body": "Spans, token cost and latency per step. First 100k spans free.",
+      "destinationUrl": "https://example.com/traces",
+      "label": "Sponsored",
+      "topics": ["trace", "observability", "debug", "agents", "latency"],
+      "slots": ["cli.session", "cli.startup", "desktop.sidebar"],
+      "status": "active",
+      "weight": 10
+    },
+    {
+      "id": "ad-ci",
+      "advertiser": "Pipeline Co",
+      "headline": "Fail fast on every pull request",
+      "body": "Parallel test shards with flaky-test detection and reruns.",
+      "destinationUrl": "https://example.com/ci",
+      "label": "Sponsored",
+      "topics": ["test", "tests", "ci", "build", "pipeline", "deploy"],
+      "slots": ["cli.session", "cli.startup", "cloud.dashboard"],
+      "status": "active",
+      "weight": 6
+    },
+    {
+      "id": "ad-deploy",
+      "advertiser": "Deploy Co",
+      "headline": "Ship previews in seconds",
+      "body": "Ephemeral environments for every branch, torn down automatically.",
+      "destinationUrl": "https://example.com/deploy",
+      "label": "Sponsored",
+      "topics": ["deploy", "preview", "hosting", "release", "branch"],
+      "slots": ["web.builder", "cloud.dashboard", "desktop.sidebar"],
+      "status": "active",
+      "weight": 8
+    },
+    {
+      "id": "ad-database",
+      "advertiser": "Row Store",
+      "headline": "A database that feels local",
+      "body": "Typed rows, branching and backups in one managed Postgres.",
+      "destinationUrl": "https://example.com/database",
+      "label": "Sponsored",
+      "topics": ["database", "postgres", "sql", "data", "storage", "backend"],
+      "slots": ["web.builder", "cloud.dashboard"],
+      "status": "active",
+      "weight": 7
+    },
+    {
+      "id": "ad-design",
+      "advertiser": "Palette",
+      "headline": "Design tokens your agents can read",
+      "body": "One source of truth for colour, type and spacing across surfaces.",
+      "destinationUrl": "https://example.com/design",
+      "label": "Sponsored",
+      "topics": ["design", "ui", "css", "theme", "frontend", "layout"],
+      "slots": ["desktop.sidebar", "web.builder"],
+      "status": "active",
+      "weight": 5
+    }
+  ]
+}

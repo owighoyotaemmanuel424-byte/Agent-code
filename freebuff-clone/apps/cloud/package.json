@@ -1,0 +1,16 @@
+{
+  "name": "@freebuff/cloud",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/server.ts",
+    "dev": "bun run src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@freebuff/ads": "workspace:*",
+    "@freebuff/sandbox-orchestrator": "workspace:*",
+    "@freebuff/shared": "workspace:*"
+  }
+}

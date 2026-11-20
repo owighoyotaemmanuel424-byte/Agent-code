@@ -1,0 +1,50 @@
+name: freebuff-clone
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-freebuff}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-freebuff_local_only}
+      POSTGRES_DB: ${POSTGRES_DB:-freebuff}
+    ports:
+      - "5432:5432"
+    volumes:
+      - platform_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-freebuff} -d ${POSTGRES_DB:-freebuff}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Sandbox runtime used by packages/sandbox-orchestrator in development.
+  # Hostile-input posture: read-only root, no added capabilities, isolated
+  # network, bounded memory and CPU. The egress allowlist proxy arrives with
+  # Phase 3; until then this profile has no outbound network at all.
+  sandbox-base:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.sandbox
+    profiles: ["sandbox"]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+      - /workspace:rw,noexec,nosuid,size=1g
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 512
+    networks:
+      - sandbox-isolated
+    command: ["sleep", "infinity"]
+
+networks:
+  sandbox-isolated:
+    internal: true
+
+volumes:
+  platform_pgdata:

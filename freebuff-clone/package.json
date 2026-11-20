@@ -1,0 +1,40 @@
+{
+  "name": "freebuff-clone",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "scripts": {
+    "check": "bun run lint && bun run typecheck && bun run test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "sandbox:up": "docker compose -f infra/docker-compose.yml up -d postgres",
+    "sandbox:down": "docker compose -f infra/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@opentui/core": "^0.9.4",
+    "@opentui/react": "^0.9.4",
+    "@tanstack/react-query": "^5.108.1",
+    "@types/bun": "^1.2.0",
+    "@types/react": "^19.1.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "react": "^19.1.1",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^2.1.8",
+    "zod": "^4.0.0"
+  }
+}

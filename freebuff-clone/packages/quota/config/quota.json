@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "default": {
+    "timeZone": "UTC",
+    "freeHoursPerDay": 5,
+    "paidHoursPerDay": 40
+  },
+  "countries": [
+    {
+      "countryCode": "US",
+      "timeZone": "America/New_York",
+      "freeHoursPerDay": 30,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "CA",
+      "timeZone": "America/Toronto",
+      "freeHoursPerDay": 30,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "GB",
+      "timeZone": "Europe/London",
+      "freeHoursPerDay": 25,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "IE",
+      "timeZone": "Europe/Dublin",
+      "freeHoursPerDay": 25,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "DE",
+      "timeZone": "Europe/Berlin",
+      "freeHoursPerDay": 25,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "FR",
+      "timeZone": "Europe/Paris",
+      "freeHoursPerDay": 25,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "ES",
+      "timeZone": "Europe/Madrid",
+      "freeHoursPerDay": 20,
+      "paidHoursPerDay": 50,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "NL",
+      "timeZone": "Europe/Amsterdam",
+      "freeHoursPerDay": 25,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "SE",
+      "timeZone": "Europe/Stockholm",
+      "freeHoursPerDay": 25,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "PL",
+      "timeZone": "Europe/Warsaw",
+      "freeHoursPerDay": 20,
+      "paidHoursPerDay": 50,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "BR",
+      "timeZone": "America/Sao_Paulo",
+      "freeHoursPerDay": 15,
+      "paidHoursPerDay": 45,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "MX",
+      "timeZone": "America/Mexico_City",
+      "freeHoursPerDay": 15,
+      "paidHoursPerDay": 45,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "IN",
+      "timeZone": "Asia/Kolkata",
+      "freeHoursPerDay": 10,
+      "paidHoursPerDay": 40,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "JP",
+      "timeZone": "Asia/Tokyo",
+      "freeHoursPerDay": 20,
+      "paidHoursPerDay": 55,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "KR",
+      "timeZone": "Asia/Seoul",
+      "freeHoursPerDay": 20,
+      "paidHoursPerDay": 55,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "SG",
+      "timeZone": "Asia/Singapore",
+      "freeHoursPerDay": 25,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "ID",
+      "timeZone": "Asia/Jakarta",
+      "freeHoursPerDay": 8,
+      "paidHoursPerDay": 35,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "PH",
+      "timeZone": "Asia/Manila",
+      "freeHoursPerDay": 8,
+      "paidHoursPerDay": 35,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "AU",
+      "timeZone": "Australia/Sydney",
+      "freeHoursPerDay": 25,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "NZ",
+      "timeZone": "Pacific/Auckland",
+      "freeHoursPerDay": 25,
+      "paidHoursPerDay": 60,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "NG",
+      "timeZone": "Africa/Lagos",
+      "freeHoursPerDay": 8,
+      "paidHoursPerDay": 35,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "KE",
+      "timeZone": "Africa/Nairobi",
+      "freeHoursPerDay": 8,
+      "paidHoursPerDay": 35,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "ZA",
+      "timeZone": "Africa/Johannesburg",
+      "freeHoursPerDay": 10,
+      "paidHoursPerDay": 40,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "TR",
+      "timeZone": "Europe/Istanbul",
+      "freeHoursPerDay": 10,
+      "paidHoursPerDay": 40,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    },
+    {
+      "countryCode": "AE",
+      "timeZone": "Asia/Dubai",
+      "freeHoursPerDay": 20,
+      "paidHoursPerDay": 55,
+      "updatedAt": "2026-11-19T00:00:00.000Z"
+    }
+  ]
+}

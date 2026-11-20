@@ -1,0 +1,20 @@
+# Base image for agent workspaces. Treated as hostile: the orchestrator mounts
+# it read-only, drops all capabilities and gives each tenant its own volume.
+FROM oven/bun:1-debian
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    ripgrep \
+    procps \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --create-home --uid 10001 --shell /bin/bash sandbox
+
+WORKDIR /workspace
+USER sandbox
+ENV HOME=/home/sandbox \
+    CI=1
+
+CMD ["sleep", "infinity"]

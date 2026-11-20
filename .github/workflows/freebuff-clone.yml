@@ -1,0 +1,42 @@
+name: freebuff-clone CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - "freebuff-clone/**"
+      - ".github/workflows/freebuff-clone.yml"
+  pull_request:
+    paths:
+      - "freebuff-clone/**"
+      - ".github/workflows/freebuff-clone.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: freebuff-clone-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: lint / typecheck / test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: freebuff-clone
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.x"
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Lint
+        run: bun run lint
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Unit tests
+        run: bun run test
