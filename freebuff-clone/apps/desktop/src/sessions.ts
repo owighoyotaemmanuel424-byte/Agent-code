@@ -1,5 +1,10 @@
 import { AppError } from "@freebuff/shared";
-import { MAX_TILES, type WorkspaceId } from "./tiles";
+import {
+  MAX_TILES,
+  normalizeRatios,
+  type TileRatios,
+  type WorkspaceId,
+} from "./tiles";
 
 export interface StreamLine {
   readonly step: string;
@@ -120,5 +125,23 @@ export class TileStore {
 
   get size(): number {
     return this.tiles.size;
+  }
+}
+
+/**
+ * Split ratios per workspace. Like the tiles themselves this is window state:
+ * the shell remembers a drag for its lifetime, the platform never sees it.
+ */
+export class LayoutStore {
+  private readonly ratios = new Map<WorkspaceId, TileRatios>();
+
+  get(workspace: WorkspaceId): TileRatios {
+    return normalizeRatios(this.ratios.get(workspace));
+  }
+
+  set(workspace: WorkspaceId, next: Partial<TileRatios>): TileRatios {
+    const merged = normalizeRatios({ ...this.get(workspace), ...next });
+    this.ratios.set(workspace, merged);
+    return merged;
   }
 }

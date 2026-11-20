@@ -93,25 +93,45 @@ platform the shell replays the SDK timeline instead of faking progress.
 Finished sessions stay in `History`; `Apps` tiles render the deployed URL in an
 iframe.
 
+### Resizing
+
+Every gutter carries a splitter: a vertical one between columns (two or more
+tiles) and a horizontal one between rows (three tiles split only the stacked
+column; four tiles split the whole workspace). Dragging updates the grid live
+through CSS fractions, and the release persists the split to `POST /api/layout`
+so a reload renders the same layout. Each splitter is a focusable
+`role="separator"` with `aria-orientation`, `aria-valuemin/max/now` and
+`aria-valuetext`: `←`/`→` or `↑`/`↓` step the split by 4%, `Home` returns it to
+an even split. Splits are clamped to 20–80% server-side and client-side, so a
+tile can never collapse; the reserved chrome height never changes, and
+splitters are hidden in the single-column mobile layout.
+
 Gate evidence:
 
-- `tests/unit/desktop/tiles.test.ts` (7 tests) — tiling coverage and non-overlap
+- `tests/unit/desktop/tiles.test.ts` (10 tests) — tiling coverage and non-overlap
   for 1–4 sessions; the reserved chrome slot and the stream starting below it;
   **the ad-rotation layout-shift test**: rotating through every inventory ad
   produces byte-identical rectangles (`toStrictEqual`), so rotation cannot move
   a stream; ads refused for paid plans, duplicated slots, unlabelled markup and
-  more than four tiles; NDJSON parsing ignores junk; the store caps and keeps
-  history.
+  more than four tiles; splits honour the dragged ratios while keeping the
+  gutter and the 84 px chrome, clamp to 20–80%, and expose handles only where a
+  split exists; NDJSON parsing ignores junk; the store caps and keeps history.
 - `tests/integration/desktop/ui.test.ts` — switcher tabs and `aria-current`;
   tile chrome holding the single labelled ad while the stream segment and the
   sidebar contain no sponsored markup; two tiles streaming two builds
   concurrently to distinct deployed apps (6 rows each); the tile cap (409 for
   JSON, a 303 with a notice for the form); `History` and `Apps` workspaces;
   rotation returning the literal label at the reserved height; tile close;
-  inline script parses.
+  splitters present only from two tiles up with ARIA values; `POST /api/layout`
+  persisting a 0.34/0.62 split into the rendered grid and refusing out-of-range,
+  non-numeric and unknown-workspace splits with 422; inline script parses.
 - Browser check at 1440 and 390 CSS px with four tiles: one sponsored row, zero
   ads inside any stream, no horizontal overflow, and after clicking
-  `↻ Next sponsored` every tile, chrome and stream rectangle was identical.
+  `↻ Next sponsored` every tile, chrome and stream rectangle was identical. A
+  pointer drag moved the column split (571 px → 690/452 px), two `↓` presses on
+  the focused row splitter moved rows to 58% (`aria-valuenow="58"`), a reload
+  rendered the persisted `0.604`/`0.5` split, and rotation after the resize still
+  left every rectangle unchanged.
 
 ## Phase 5 gate results
 

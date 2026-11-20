@@ -270,7 +270,56 @@ describe("Phase 5 desktop UI: tiled workspaces", () => {
       expect(rotation.html).toContain(">Sponsored<");
       expect(rotation.height).toBe(84);
 
-      // 7. Closing a tile keeps the workspace consistent.
+      // 7. Splitters resize chrome and stream together, by pointer or keyboard.
+      // A single tile has nothing to split; four tiles expose both handles.
+      expect(html).not.toContain('role="separator"');
+      const tiled = await (
+        await shell.fetch(new Request(`${ORIGIN}/?workspace=build`))
+      ).text();
+      expect(tiled).toContain('role="separator"');
+      expect(tiled).toContain('aria-orientation="vertical"');
+      expect(tiled).toContain('tabindex="0"');
+      expect(tiled).toContain('data-axis="column"');
+      expect(tiled).toContain('data-axis="row"');
+      expect(tiled).toContain('aria-valuenow="50"');
+
+      const resized = await shell.fetch(
+        json(`${ORIGIN}/api/layout`, { workspace: "build", column: 0.34, row: 0.62 }),
+      );
+      expect(resized.status).toBe(200);
+      expect(await resized.json()).toMatchObject({ workspace: "build", column: 0.34, row: 0.62 });
+      const afterResize = await (
+        await shell.fetch(new Request(`${ORIGIN}/?workspace=build`))
+      ).text();
+      expect(afterResize).toContain('data-column="0.34"');
+      expect(afterResize).toContain("0.34fr");
+      expect(afterResize).toContain('aria-valuenow="34"');
+      // The sponsored slot still lives in chrome at its reserved height.
+      expect(afterResize).toContain('data-ad-height="84"');
+      expect(afterResize.split('class="sponsored-ad"')).toHaveLength(2);
+      const resizedStream = afterResize.slice(
+        afterResize.indexOf('data-region="stream"'),
+        afterResize.indexOf("</ol>"),
+      );
+      expect(resizedStream.toLowerCase()).not.toContain("sponsored");
+
+      // Out-of-range and non-numeric splits are refused rather than silently clamped.
+      for (const bad of [
+        { workspace: "build", column: 0.95 },
+        { workspace: "build", row: 0.05 },
+        { workspace: "build", column: "wide" },
+        { workspace: "nope", column: 0.4 },
+      ]) {
+        const rejected = await shell.fetch(json(`${ORIGIN}/api/layout`, bad));
+        expect(rejected.status).toBe(422);
+      }
+      // The refusal left the stored split untouched.
+      const kept = await (
+        await shell.fetch(new Request(`${ORIGIN}/?workspace=build`))
+      ).text();
+      expect(kept).toContain('data-column="0.34"');
+
+      // 8. Closing a tile keeps the workspace consistent.
       const closed = await shell.fetch(
         new Request(`${ORIGIN}/api/tiles/tile-2/close`, { method: "POST" }),
       );

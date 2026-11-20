@@ -67,11 +67,41 @@ export interface TileView {
   readonly plan: "free" | "paid";
 }
 
-const gridTiles = (count: number, viewport: Viewport): readonly Rect[] => {
+/** Split ratios of a workspace: share of the first column and first row. */
+export interface TileRatios {
+  readonly column: number;
+  readonly row: number;
+}
+
+export const DEFAULT_RATIOS: TileRatios = { column: 0.5, row: 0.5 };
+/** A splitter can never collapse a tile away or hide it behind another. */
+export const MIN_RATIO = 0.2;
+export const MAX_RATIO = 0.8;
+export const RATIO_STEP = 0.04;
+
+export const clampRatio = (value: number): number => {
+  if (!Number.isFinite(value)) return DEFAULT_RATIOS.column;
+  return Math.min(MAX_RATIO, Math.max(MIN_RATIO, value));
+};
+
+export const normalizeRatios = (
+  ratios?: Partial<TileRatios> | undefined,
+): TileRatios => ({
+  column: clampRatio(ratios?.column ?? DEFAULT_RATIOS.column),
+  row: clampRatio(ratios?.row ?? DEFAULT_RATIOS.row),
+});
+
+/** Splits the space left after the gutters, so a drag never changes the gap. */
+const share = (total: number, ratio: number, gap: number): number =>
+  Math.round((total - gap) * ratio);
+
+const gridTiles = (
+  count: number,
+  viewport: Viewport,
+  ratios: TileRatios,
+): readonly Rect[] => {
   const { width, height } = viewport;
   const gap = TILE_GAP_PX;
-  const half = (total: number): number => Math.floor((total - gap) / 2);
-  const rest = (total: number, first: number): number => total - first - gap;
 
   switch (count) {
     case 0:
@@ -79,41 +109,35 @@ const gridTiles = (count: number, viewport: Viewport): readonly Rect[] => {
     case 1:
       return [{ x: 0, y: 0, width, height }];
     case 2: {
-      const column = half(width);
+      const column = share(width, ratios.column, gap);
       return [
         { x: 0, y: 0, width: column, height },
-        { x: column + gap, y: 0, width: rest(width, column), height },
+        { x: column + gap, y: 0, width: width - column - gap, height },
       ];
     }
     case 3: {
-      const column = half(width);
-      const row = half(height);
+      const column = share(width, ratios.column, gap);
+      const row = share(height, ratios.row, gap);
+      const rightX = column + gap;
+      const rightWidth = width - column - gap;
       return [
         { x: 0, y: 0, width: column, height },
-        { x: column + gap, y: 0, width: rest(width, column), height: row },
-        {
-          x: column + gap,
-          y: row + gap,
-          width: rest(width, column),
-          height: rest(height, row),
-        },
+        { x: rightX, y: 0, width: rightWidth, height: row },
+        { x: rightX, y: row + gap, width: rightWidth, height: height - row - gap },
       ];
     }
     default: {
-      const column = half(width);
-      const row = half(height);
-      const rightWidth = rest(width, column);
-      const bottomHeight = rest(height, row);
+      const column = share(width, ratios.column, gap);
+      const row = share(height, ratios.row, gap);
+      const rightX = column + gap;
+      const rightWidth = width - column - gap;
+      const bottomY = row + gap;
+      const bottomHeight = height - row - gap;
       return [
         { x: 0, y: 0, width: column, height: row },
-        { x: column + gap, y: 0, width: rightWidth, height: row },
-        { x: 0, y: row + gap, width: column, height: bottomHeight },
-        {
-          x: column + gap,
-          y: row + gap,
-          width: rightWidth,
-          height: bottomHeight,
-        },
+        { x: rightX, y: 0, width: rightWidth, height: row },
+        { x: 0, y: bottomY, width: column, height: bottomHeight },
+        { x: rightX, y: bottomY, width: rightWidth, height: bottomHeight },
       ];
     }
   }
@@ -123,6 +147,7 @@ const gridTiles = (count: number, viewport: Viewport): readonly Rect[] => {
 export const layoutWorkspace = (
   count: number,
   viewport: Viewport,
+  ratios?: Partial<TileRatios> | undefined,
 ): readonly TileRects[] => {
   if (count > MAX_TILES) {
     throw new AppError({
@@ -130,7 +155,7 @@ export const layoutWorkspace = (
       message: `A workspace tiles at most ${String(MAX_TILES)} sessions`,
     });
   }
-  return gridTiles(count, viewport).map((tile) => {
+  return gridTiles(count, viewport, normalizeRatios(ratios)).map((tile) => {
     const header: Rect = {
       x: tile.x,
       y: tile.y,
@@ -151,6 +176,62 @@ export const layoutWorkspace = (
     };
     return { tile, header, chrome, stream };
   });
+};
+
+export interface SplitHandle {
+  readonly axis: "column" | "row";
+  readonly orientation: "vertical" | "horizontal";
+  /** Current split as a fraction of the workspace, for ARIA. */
+  readonly value: number;
+  readonly rect: Rect;
+}
+
+const HANDLE_PX = 10;
+
+/**
+ * Drag targets for the same gutters the layout uses. A column splitter is a
+ * vertical bar between columns; the row splitter for three tiles spans only the
+ * stacked column, because that is the only place a row split exists.
+ */
+export const splitHandles = (
+  count: number,
+  viewport: Viewport,
+  ratios?: Partial<TileRatios> | undefined,
+): readonly SplitHandle[] => {
+  const normalized = normalizeRatios(ratios);
+  const tiles = layoutWorkspace(count, viewport, normalized);
+  const handles: SplitHandle[] = [];
+  const columnEdge = tiles[0] === undefined ? 0 : tiles[0].tile.x + tiles[0].tile.width;
+  if (count >= 2) {
+    handles.push({
+      axis: "column",
+      orientation: "vertical",
+      value: normalized.column,
+      rect: {
+        x: columnEdge + Math.floor(TILE_GAP_PX / 2) - Math.floor(HANDLE_PX / 2),
+        y: 0,
+        width: HANDLE_PX,
+        height: viewport.height,
+      },
+    });
+  }
+  if (count === 3 || count === 4) {
+    const anchor = count === 3 ? tiles[1] : tiles[0];
+    const rowEdge = anchor === undefined ? 0 : anchor.tile.y + anchor.tile.height;
+    const x = count === 3 && anchor !== undefined ? anchor.tile.x : 0;
+    handles.push({
+      axis: "row",
+      orientation: "horizontal",
+      value: normalized.row,
+      rect: {
+        x,
+        y: rowEdge + Math.floor(TILE_GAP_PX / 2) - Math.floor(HANDLE_PX / 2),
+        width: count === 3 && anchor !== undefined ? anchor.tile.width : viewport.width,
+        height: HANDLE_PX,
+      },
+    });
+  }
+  return handles;
 };
 
 const overlaps = (a: Rect, b: Rect): boolean =>

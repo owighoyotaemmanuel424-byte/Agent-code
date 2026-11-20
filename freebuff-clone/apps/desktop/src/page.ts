@@ -2,10 +2,12 @@ import type { QuotaSnapshot } from "@freebuff/shared";
 import { sponsoredAdHtml } from "@freebuff/ads";
 import {
   MAX_TILES,
+  normalizeRatios,
   TILE_CHROME_PX,
   TILE_HEADER_PX,
   WORKSPACES,
   WORKSPACE_LABELS,
+  type TileRatios,
   type TileView,
   type WorkspaceId,
 } from "./tiles";
@@ -28,6 +30,8 @@ export interface DesktopPageOptions {
   readonly workspace: WorkspaceId;
   readonly counts: Readonly<Record<WorkspaceId, number>>;
   readonly platformUrl: string;
+  /** Split ratios of the workspace grid, so a resize survives a reload. */
+  readonly ratios?: Partial<TileRatios>;
   /** Rendered as a dismissible line in the top bar, e.g. when a workspace is full. */
   readonly notice?: string;
 }
@@ -102,6 +106,31 @@ const tileBody = (tile: TileView): string =>
         <iframe title="${escapeHtml(tile.title)} preview" src="${escapeHtml(tile.appUrl)}" loading="lazy"></iframe>
       </div>`;
 
+const gridStyle = (count: number, ratios: TileRatios): string => {
+  if (count < 2) return "";
+  const columns = `grid-template-columns:minmax(0, ${String(ratios.column)}fr) minmax(0, ${String(1 - ratios.column)}fr)`;
+  if (count === 2) return ` style="${columns}"`;
+  const rows = `grid-template-rows:minmax(0, ${String(ratios.row)}fr) minmax(0, ${String(1 - ratios.row)}fr)`;
+  return ` style="${columns};${rows}"`;
+};
+
+const percent = (value: number): string => String(Math.round(value * 100));
+
+/** Splitters sit in the same gutters the layout model uses. */
+const splitters = (count: number, ratios: TileRatios): string => {
+  if (count < 2) return "";
+  const column = `<button type="button" class="splitter" data-axis="column" role="separator" aria-orientation="vertical" aria-label="Resize columns" aria-valuemin="20" aria-valuemax="80" aria-valuenow="${percent(ratios.column)}" aria-valuetext="${percent(ratios.column)}% of the width" tabindex="0" style="left:calc(${String(ratios.column)} * 100% - 5px)"></button>`;
+  if (count === 2) return column;
+  // Three tiles only split rows inside the stacked column, so the handle starts
+  // at the column gutter instead of spanning the whole workspace.
+  const rowStyle =
+    count === 3
+      ? `left:calc(${String(ratios.column)} * 100% + 5px);right:0;top:calc(${String(ratios.row)} * 100% - 5px)`
+      : `top:calc(${String(ratios.row)} * 100% - 5px)`;
+  const row = `<button type="button" class="splitter" data-axis="row" role="separator" aria-orientation="horizontal" aria-label="Resize rows" aria-valuemin="20" aria-valuemax="80" aria-valuenow="${percent(ratios.row)}" aria-valuetext="${percent(ratios.row)}% of the height" tabindex="0" style="${rowStyle}"></button>`;
+  return `${column}${row}`;
+};
+
 const tileMarkup = (tile: TileView): string => `<article class="tile" data-tile-id="${escapeHtml(tile.id)}" data-status="${tile.status}" data-workspace="${tile.workspace}" aria-labelledby="title-${escapeHtml(tile.id)}">
   <header class="tile-head">
     <span class="tile-dot" aria-hidden="true"></span>
@@ -153,6 +182,7 @@ export const renderDesktopPage = (options: DesktopPageOptions): string => {
       ? 0
       : Math.min(100, Math.max(0, (state.quota.consumedSecondsToday / quotaLimitSeconds) * 100));
   const tiles = options.tiles;
+  const ratios = normalizeRatios(options.ratios);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -336,7 +366,7 @@ export const renderDesktopPage = (options: DesktopPageOptions): string => {
   .workspace { display: flex; flex-direction: column; min-height: 0; flex: 1; }
   .tiles {
     display: grid; gap: 14px; flex: 1; min-height: 560px;
-    height: calc(100vh - 96px);
+    height: calc(100vh - 96px); position: relative;
   }
   .tiles[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
   .tiles[data-count="2"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -349,6 +379,25 @@ export const renderDesktopPage = (options: DesktopPageOptions): string => {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
+
+  /* splitters live in the gutters and resize chrome and stream together */
+  .splitter {
+    position: absolute; z-index: 4; padding: 0; border: 0; background: transparent;
+    touch-action: none; border-radius: 999px;
+  }
+  .splitter[data-axis="column"] { width: 10px; top: 0; bottom: 0; cursor: col-resize; }
+  .splitter[data-axis="row"] { height: 10px; left: 0; right: 0; cursor: row-resize; }
+  .splitter::after {
+    content: ""; position: absolute; inset: 0; margin: auto;
+    border-radius: 999px; background: var(--border-strong);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+  }
+  .splitter[data-axis="column"]::after { width: 2px; height: 46%; }
+  .splitter[data-axis="row"]::after { height: 2px; width: 46%; }
+  .splitter:hover::after, .splitter:focus-visible::after, .splitter[data-dragging="true"]::after {
+    background: var(--accent); box-shadow: 0 0 0 3px rgba(124, 140, 255, 0.18);
+  }
+  .splitter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .tile {
     display: grid; grid-template-rows: var(--tile-header) var(--tile-chrome) minmax(0, 1fr);
@@ -479,6 +528,7 @@ export const renderDesktopPage = (options: DesktopPageOptions): string => {
     }
     .tiles[data-count="3"] > .tile:first-child { grid-row: auto; }
     .tile { min-height: 420px; }
+    .splitter { display: none; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
@@ -567,8 +617,9 @@ export const renderDesktopPage = (options: DesktopPageOptions): string => {
       ${
         tiles.length === 0
           ? emptyWorkspace(workspace)
-          : `<div class="tiles" data-count="${String(tiles.length)}" data-workspace="${workspace}">
+          : `<div class="tiles" data-count="${String(tiles.length)}" data-workspace="${workspace}" data-column="${String(ratios.column)}" data-row="${String(ratios.row)}" data-rows="${tiles.length > 2 ? "true" : "false"}"${gridStyle(tiles.length, ratios)}>
         ${tiles.map((tile) => tileMarkup(tile)).join("\n        ")}
+        ${splitters(tiles.length, ratios)}
       </div>`
       }
     </section>
@@ -692,6 +743,101 @@ export const renderDesktopPage = (options: DesktopPageOptions): string => {
       });
     });
   });
+
+  var grid = document.querySelector('.tiles');
+  if (grid) {
+    var workspaceId = grid.getAttribute('data-workspace') || 'build';
+    var hasRows = grid.getAttribute('data-rows') === 'true';
+    var ratios = {
+      column: parseFloat(grid.getAttribute('data-column') || '0.5'),
+      row: parseFloat(grid.getAttribute('data-row') || '0.5')
+    };
+    var splitters = document.querySelectorAll('.splitter');
+
+    function clamp(value) { return Math.min(0.8, Math.max(0.2, value)); }
+
+    function paint() {
+      grid.setAttribute('data-column', String(ratios.column));
+      grid.setAttribute('data-row', String(ratios.row));
+      grid.style.gridTemplateColumns =
+        'minmax(0, ' + ratios.column + 'fr) minmax(0, ' + (1 - ratios.column) + 'fr)';
+      if (hasRows) {
+        grid.style.gridTemplateRows =
+          'minmax(0, ' + ratios.row + 'fr) minmax(0, ' + (1 - ratios.row) + 'fr)';
+      }
+      Array.prototype.forEach.call(splitters, function (handle) {
+        var axis = handle.getAttribute('data-axis');
+        var value = axis === 'row' ? ratios.row : ratios.column;
+        var percent = Math.round(value * 100);
+        handle.setAttribute('aria-valuenow', String(percent));
+        handle.setAttribute('aria-valuetext', percent + '% of the ' + (axis === 'row' ? 'height' : 'width'));
+        if (axis === 'row') handle.style.top = 'calc(' + value + ' * 100% - 5px)';
+        else handle.style.left = 'calc(' + value + ' * 100% - 5px)';
+      });
+    }
+
+    function save() {
+      fetch('/api/layout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          workspace: workspaceId,
+          column: Math.round(ratios.column * 1000) / 1000,
+          row: Math.round(ratios.row * 1000) / 1000
+        })
+      }).catch(function () {});
+    }
+
+    Array.prototype.forEach.call(splitters, function (handle) {
+      var axis = handle.getAttribute('data-axis') === 'row' ? 'row' : 'column';
+
+      handle.addEventListener('pointerdown', function (event) {
+        event.preventDefault();
+        if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
+        handle.setAttribute('data-dragging', 'true');
+        var box = grid.getBoundingClientRect();
+
+        function move(moveEvent) {
+          var next = axis === 'row'
+            ? (moveEvent.clientY - box.top) / box.height
+            : (moveEvent.clientX - box.left) / box.width;
+          ratios[axis] = clamp(next);
+          paint();
+        }
+
+        function end() {
+          handle.removeEventListener('pointermove', move);
+          handle.removeEventListener('pointerup', end);
+          handle.removeEventListener('pointercancel', end);
+          handle.removeAttribute('data-dragging');
+          save();
+        }
+
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', end);
+        handle.addEventListener('pointercancel', end);
+      });
+
+      handle.addEventListener('keydown', function (event) {
+        var handled = true;
+        if (axis === 'row') {
+          if (event.key === 'ArrowUp') ratios.row = clamp(ratios.row - 0.04);
+          else if (event.key === 'ArrowDown') ratios.row = clamp(ratios.row + 0.04);
+          else if (event.key === 'Home') ratios.row = 0.5;
+          else handled = false;
+        } else {
+          if (event.key === 'ArrowLeft') ratios.column = clamp(ratios.column - 0.04);
+          else if (event.key === 'ArrowRight') ratios.column = clamp(ratios.column + 0.04);
+          else if (event.key === 'Home') ratios.column = 0.5;
+          else handled = false;
+        }
+        if (!handled) return;
+        event.preventDefault();
+        paint();
+        save();
+      });
+    });
+  }
 
   var rotate = document.getElementById('rotate-ad');
   if (rotate) {

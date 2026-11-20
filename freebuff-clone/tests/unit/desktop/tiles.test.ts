@@ -2,8 +2,14 @@ import { describe, expect, it } from "vitest";
 import { defaultAdInventory, sponsoredAdHtml } from "@freebuff/ads";
 import type { Ad, AdDecision } from "@freebuff/shared";
 import {
+  clampRatio,
+  DEFAULT_RATIOS,
   layoutWorkspace,
+  MAX_RATIO,
   MAX_TILES,
+  MIN_RATIO,
+  normalizeRatios,
+  splitHandles,
   rotateTileAd,
   TILE_CHROME_PX,
   TILE_HEADER_PX,
@@ -94,6 +100,58 @@ describe("desktop tiling", () => {
       expect(after[0]?.stream).toStrictEqual(before[0]?.stream);
       expect(() => validateWorkspaceChrome(workspace, after)).not.toThrow();
     });
+  });
+
+  it("splits on the dragged ratios without changing the gutter or chrome", () => {
+    const wide = layoutWorkspace(2, VIEWPORT, { column: 0.3 });
+    const expected = Math.round((VIEWPORT.width - 14) * 0.3);
+    expect(wide[0]?.tile.width).toBe(expected);
+    expect(wide[1]?.tile.width).toBe(VIEWPORT.width - expected - 14);
+    expect((wide[0]?.tile.width ?? 0) + (wide[1]?.tile.width ?? 0) + 14).toBe(VIEWPORT.width);
+
+    const tall = layoutWorkspace(4, VIEWPORT, { column: 0.35, row: 0.65 });
+    const expectedRow = Math.round((VIEWPORT.height - 14) * 0.65);
+    expect(tall[0]?.tile.height).toBe(expectedRow);
+    // Chrome keeps its reserved height at every split, so ads stay put.
+    for (const rect of [...wide, ...tall]) {
+      expect(rect.chrome.height).toBe(TILE_CHROME_PX);
+      expect(rect.stream.y).toBe(rect.chrome.y + rect.chrome.height);
+    }
+    expect(() =>
+      validateWorkspaceChrome(
+        tiles(4).map((tile, index) => (index === 0 ? { ...tile, ad: adFor(0) } : tile)),
+        tall,
+      ),
+    ).not.toThrow();
+  });
+
+  it("clamps splits so a tile can never be collapsed or hidden", () => {
+    expect(normalizeRatios({ column: 0.95 })).toEqual({ column: MAX_RATIO, row: 0.5 });
+    expect(normalizeRatios({ column: 0.01, row: -3 })).toEqual({
+      column: MIN_RATIO,
+      row: MIN_RATIO,
+    });
+    expect(clampRatio(Number.NaN)).toBe(DEFAULT_RATIOS.column);
+    expect(normalizeRatios()).toEqual(DEFAULT_RATIOS);
+  });
+
+  it("exposes keyboard-draggable splitters only where a split exists", () => {
+    expect(splitHandles(1, VIEWPORT)).toHaveLength(0);
+
+    const two = splitHandles(2, VIEWPORT, { column: 0.3 });
+    expect(two).toHaveLength(1);
+    expect(two[0]).toMatchObject({ axis: "column", orientation: "vertical", value: 0.3 });
+    expect(two[0]?.rect.width).toBeGreaterThanOrEqual(8);
+
+    const three = splitHandles(3, VIEWPORT, { column: 0.4, row: 0.6 });
+    expect(three.map((handle) => handle.axis)).toEqual(["column", "row"]);
+    // The row splitter only spans the stacked column in a three-tile layout.
+    const right = layoutWorkspace(3, VIEWPORT, { column: 0.4 }).map((rect) => rect.tile);
+    expect(three[1]?.rect.width).toBe((right[1]?.width ?? 0));
+
+    const four = splitHandles(4, VIEWPORT, { column: 0.5, row: 0.5 });
+    expect(four.map((handle) => handle.orientation)).toEqual(["vertical", "horizontal"]);
+    expect(four[1]?.rect.width).toBe(VIEWPORT.width);
   });
 
   it("refuses ads that would break the one-slot, free-plan, labelled rules", () => {

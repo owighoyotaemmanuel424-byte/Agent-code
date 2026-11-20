@@ -279,3 +279,15 @@ chrome slot that changed height, or a stream region that starts above the
 chrome. The sidebar keeps account, quota and apps, and holds no ad, so the
 one-visible-ad rule (0012) is still satisfied per view.
 
+## D32 — Splits are ratios in window state, clamped on both sides
+
+Resizing writes a column/row ratio (0.2–0.8) rather than pixel sizes: the grid
+splits the space left after the 14 px gutters, so a drag can never change the
+gutter, overlap tiles or shrink the reserved chrome slot that holds the
+sponsored row. `layoutWorkspace` and `splitHandles` both take the same ratios,
+so the drag targets and the computed rectangles are the same numbers. The server
+refuses out-of-range, non-numeric and unknown-workspace splits with 422 instead
+of silently clamping, and the ratios live in `LayoutStore` — window state like
+the tiles, not entitlement state. Keyboard support is not an afterthought: each
+splitter is a focusable `separator` with ARIA values, arrow-key stepping and
+`Home` to reset, which is also what the tests assert.

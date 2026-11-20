@@ -2,7 +2,8 @@
 
 A local desktop shell over the platform API: a tiled window manager with three
 workspaces (`Build`, `History`, `Apps`), one to four agent sessions per
-workspace, and a per-tile build stream. The sidebar shows the signed-in account,
+workspace, resizable through the gutters (drag or arrow keys on a focused
+splitter), and a per-tile build stream. The sidebar shows the signed-in account,
 server quota and the account's apps; the single `desktop.sidebar` sponsored slot
 lives in tile chrome, at a reserved height, and never inside a stream. Same
 runtime, same auth, same quota as the CLI and web surfaces — the shell holds no
@@ -40,6 +41,7 @@ Routes:
 | `POST /api/tiles` | Add a build tile (max four per workspace) |
 | `POST /api/tiles/:id/build` | Stream that tile's build as NDJSON |
 | `POST /api/tiles/:id/close` | Remove a tile |
+| `POST /api/layout` | Persist a workspace split (`{ workspace, column?, row? }`, 0.2–0.8) |
 | `GET /api/ads/rotate` | Next labelled decision for the chrome slot |
 | `POST /api/build` | Non-streaming build through the SDK |
 

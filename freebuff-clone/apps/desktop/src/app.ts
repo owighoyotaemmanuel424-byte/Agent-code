@@ -2,11 +2,13 @@ import type { FreebuffClient } from "@freebuff/sdk";
 import type { AdDecision, QuotaSnapshot } from "@freebuff/shared";
 import { AppError } from "@freebuff/shared";
 import { sponsoredAdHtml } from "@freebuff/ads";
-import { TileStore, type TileSession } from "./sessions";
+import { LayoutStore, TileStore, type TileSession } from "./sessions";
 import { parseStreamEvent, streamEventToLine } from "./stream";
 import {
   isWorkspaceId,
   layoutWorkspace,
+  MAX_RATIO,
+  MIN_RATIO,
   validateWorkspaceChrome,
   WORKSPACES,
   type TileAd,
@@ -158,6 +160,7 @@ export const createDesktopApp = (
 ): { readonly fetch: (request: Request) => Promise<Response> } => {
   const sessionId = options.sessionId ?? "desktop-local";
   const store = new TileStore();
+  const layouts = new LayoutStore();
 
   const ensureDefaultTile = (): void => {
     if (store.list("build").length !== 0) return;
@@ -337,7 +340,8 @@ export const createDesktopApp = (
     ensureDefaultTile();
     const tiles = withAd(workspaceTiles(workspace, state), ad);
     const viewport = { width: 1440, height: 820 };
-    validateWorkspaceChrome(tiles, layoutWorkspace(tiles.length, viewport));
+    const ratios = layouts.get(workspace);
+    validateWorkspaceChrome(tiles, layoutWorkspace(tiles.length, viewport, ratios));
     return new Response(
       renderDesktopPage({
         state,
@@ -345,6 +349,7 @@ export const createDesktopApp = (
         workspace,
         counts: counts(state),
         platformUrl: options.platformUrl,
+        ratios,
         ...(notice === undefined || notice.length === 0 ? {} : { notice }),
       }),
       {
@@ -413,6 +418,41 @@ export const createDesktopApp = (
             return json(201, { tile });
           }
           return redirect(`/?workspace=build&tile=${encodeURIComponent(tile.id)}`);
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/layout") {
+          const body = await readBody(request);
+          const requested = stringField(body, "workspace");
+          if (!isWorkspaceId(requested)) {
+            throw new AppError({
+              code: "validation_failed",
+              message: "Unknown workspace",
+            });
+          }
+          const readRatio = (key: "column" | "row"): number | undefined => {
+            const value = body[key];
+            if (value === undefined) return undefined;
+            if (typeof value !== "number" || !Number.isFinite(value)) {
+              throw new AppError({
+                code: "validation_failed",
+                message: `Split ${key} must be a number`,
+              });
+            }
+            if (value < MIN_RATIO || value > MAX_RATIO) {
+              throw new AppError({
+                code: "validation_failed",
+                message: `Split ${key} must stay between ${String(MIN_RATIO)} and ${String(MAX_RATIO)}`,
+              });
+            }
+            return value;
+          };
+          const column = readRatio("column");
+          const row = readRatio("row");
+          const next = layouts.set(requested, {
+            ...(column === undefined ? {} : { column }),
+            ...(row === undefined ? {} : { row }),
+          });
+          return json(200, { workspace: requested, ...next });
         }
 
         if (request.method === "GET" && url.pathname === "/api/ads/rotate") {
