@@ -163,6 +163,45 @@ stream, fixed at four rows, labelled `Sponsored`, and validated at render time.
 Web builder and cloud dashboard keep their existing labelled banner; no ad is
 inside a build log, diff, tool card or preview pane.
 
+## Phase 3 UI (cloud sandboxes)
+
+`GET /sandboxes` is a server-rendered list-detail workspace; `?sandbox=<id>`
+renders the selected sandbox's detail so the page is complete without
+JavaScript. The client script adds creation, share and stop/delete behaviour and
+polls a non-terminal sandbox every 3s, reloading only when the phase changes.
+
+| Region | Content |
+| --- | --- |
+| Left rail | GitHub connect control (explained when `GITHUB_CLIENT_ID` is unset), repository URL + branch form, server-rendered sandbox list, one labelled sponsored slot |
+| Detail | phase pill, status timeline, live preview iframe + open-in-new-tab, share field with copy button, stop/delete actions, collapsible logs |
+
+Status timeline: `apps/cloud/src/timeline.ts` maps a `SandboxPhase` to steps
+(provisioning → cloning → installing → starting → running), with exactly one
+animated step while work is in progress, a settled timeline at `ready`, a failed
+step at `failed` and an appended `stopped` step. Every step carries `✓`, `▸`,
+`✗` or `○` as well as colour, and the animation is removed under
+`prefers-reduced-motion`.
+
+Phase 3 UI gate evidence:
+
+- `tests/unit/cloud/timeline.test.ts` — transitions for creating, cloning,
+  installing, starting, ready, failed and stopped; one active step at most;
+  glyphs and escaped failure detail in the markup.
+- `tests/integration/cloud/ui.test.ts` — the shell renders the repository rail,
+  empty state and labelled ad; after a real sandbox is created the detail has an
+  iframe pointing at the live preview, a share field whose link equals
+  `GET /api/sandboxes/:id/share`, the `ready` timeline and the logs; stopping
+  settles the timeline and drops the iframe; unknown ids explain themselves
+  inline; a configured GitHub client id becomes a real authorize link.
+- No ad inside the preview pane: `previewPaneHtml` output contains no
+  sponsored markup (asserted directly), and the only slot is in the left rail.
+- The landing page links to `/sandboxes` from the header and footer.
+
+Known Phase 3 UI claim: the GitHub OAuth callback (code exchange) is not
+implemented because no client id/secret is configured here; the connect control
+links to GitHub's authorize endpoint when `GITHUB_CLIENT_ID` is present and
+explains the requirement otherwise.
+
 ## Known gaps
 
 - No live model credential is configured here, so gates use the scripted test

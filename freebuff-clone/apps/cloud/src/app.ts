@@ -3,6 +3,7 @@ import type { SandboxManager } from "@freebuff/sandbox-orchestrator";
 import type { AdEngine } from "@freebuff/ads";
 import { SPONSORED_LABEL, sponsoredAdHtml } from "@freebuff/ads";
 import { dashboardHtml } from "./dashboard";
+import { sandboxPageHtml } from "./sandbox-ui";
 
 export interface CloudAppOptions {
   readonly manager: SandboxManager;
@@ -12,6 +13,8 @@ export interface CloudAppOptions {
   readonly previewHint?: string;
   /** Free-tier sponsored inventory; paid accounts would be excluded here. */
   readonly ads?: AdEngine;
+  /** GitHub OAuth app client id; the connect control is explained when absent. */
+  readonly githubClientId?: string;
   readonly now?: () => Date;
 }
 
@@ -97,6 +100,52 @@ export const createCloudApp = (
               ...(landingAd === undefined
                 ? {}
                 : { adHtml: sponsoredAdHtml(landingAd.ad) }),
+            }),
+            {
+              status: 200,
+              headers: {
+                "content-type": "text/html; charset=utf-8",
+                "cache-control": "no-store",
+              },
+            },
+          );
+        }
+
+        if (request.method === "GET" && url.pathname === "/sandboxes") {
+          const sandboxes = await options.manager.list(tenant);
+          const selectedId = url.searchParams.get("sandbox") ?? undefined;
+          const selected =
+            selectedId === undefined
+              ? undefined
+              : await options.manager.status(selectedId, tenant).catch(() => undefined);
+          const shareUrl =
+            selected !== undefined && selected.phase === "ready"
+              ? await options.manager.shareLink(String(selected.sandboxId), tenant).catch(() => undefined)
+              : undefined;
+          const sandboxAd = options.ads?.serve({
+            slot: "cloud.dashboard",
+            plan: "free",
+            topics: [],
+            seed: `cloud-sandboxes-${(options.now ?? (() => new Date()))().toISOString().slice(0, 10)}`,
+            surface: "cloud",
+            sessionId: sessionIdSchema.parse("cloud-sandboxes"),
+          });
+          return new Response(
+            sandboxPageHtml({
+              providerName: options.providerName,
+              previewHint:
+                options.previewHint ??
+                "Previews are served from this host while the platform is in local mode.",
+              sandboxes,
+              ...(selected === undefined ? {} : { selected }),
+              ...(shareUrl === undefined ? {} : { shareUrl }),
+              ...(selectedId !== undefined && selected === undefined
+                ? { notice: `Sandbox ${selectedId} was not found in this workspace.` }
+                : {}),
+              ...(options.githubClientId === undefined
+                ? {}
+                : { githubClientId: options.githubClientId }),
+              ...(sandboxAd === undefined ? {} : { adHtml: sponsoredAdHtml(sandboxAd.ad) }),
             }),
             {
               status: 200,

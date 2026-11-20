@@ -62,6 +62,9 @@ const main = async (): Promise<void> => {
     manager,
     providerName: selection.name,
     previewHint: selection.hint,
+    ...(process.env["GITHUB_CLIENT_ID"] === undefined || process.env["GITHUB_CLIENT_ID"].length === 0
+      ? {}
+      : { githubClientId: process.env["GITHUB_CLIENT_ID"] }),
     ads: new AdEngine({
       inventory: defaultAdInventory,
       store: new InMemoryAdEventStore(),

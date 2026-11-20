@@ -228,6 +228,7 @@ export const dashboardHtml = (options: {
       <span class="brand-tag">cloud</span>
     </a>
     <span class="header-spacer"></span>
+    <a class="pill" href="/sandboxes">Open sandboxes</a>
     <span class="pill" title="Active sandbox provider">
       <span class="dot"></span> provider <code>${escapeHtml(options.providerName)}</code>
     </span>
@@ -287,7 +288,7 @@ export const dashboardHtml = (options: {
     <span>freebuff cloud · isolated workspaces, one call away</span>
     <span class="footer-links">
       <a href="/healthz">Status</a>
-      <a href="/api/sandboxes">Sandboxes</a>
+      <a href="/sandboxes">Sandboxes</a>
       <a href="/">Builder</a>
     </span>
   </div>
