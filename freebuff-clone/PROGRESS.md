@@ -202,6 +202,37 @@ implemented because no client id/secret is configured here; the connect control
 links to GitHub's authorize endpoint when `GITHUB_CLIENT_ID` is present and
 explains the requirement otherwise.
 
+## Phase 4 UI (web builder studio)
+
+The builder is a two-pane studio: prompt and examples on the left, live preview
+and post-build actions on the right, with a build log underneath. The page is
+still server-rendered HTML with one inline script, no bundler and no new
+dependency.
+
+| Region | Content |
+| --- | --- |
+| Prompt pane | textarea, Ctrl+Enter, example chips, `Deploy app` (one hour charged on deploy) |
+| Preview pane | iframe that appears when the build finishes, `Open app`, `Download source`, `Eject → GitHub` form (repo name + token, never stored), inline status text |
+| Build log | `POST /api/apps/build` streams NDJSON `step` events for spec → scaffolded → schema → auth → deployed, then a `done` event with the app and URL; failures arrive as an `error` event and render as an inline row |
+| Sponsored footer | one labelled slot, rendered by `buildLogSponsorFooter` as a sibling of `#build-log`; markup without the literal label is refused at render time |
+
+Gate evidence:
+
+- `POST /api/apps/build` shares `prepareBuild` with `POST /api/apps`, so the
+  session, phone verification and hour charge cannot drift between the JSON and
+  streaming routes. The JSON route keeps its stable `design/scaffold/deploy`
+  timeline; the stream names the finer steps.
+- `tests/integration/web/ui.test.ts` — two-pane markup, action wiring and the
+  inline script parsing; the streamed steps arrive in order with details and end
+  with the deployed URL, which then serves the app; the eject bundle downloads
+  and Eject → GitHub refuses an empty token; the sponsored footer rejects
+  unlabelled markup and the build-log and preview segments contain no sponsored
+  markup.
+- `tests/integration/web/gate.test.ts` and `tests/integration/phase5/gate.test.ts`
+  still pass unchanged (they assert the JSON timeline and labelled landing ad).
+- Visual check at 1440 and 390 CSS px: two panes side by side, log and sponsored
+  footer below, no horizontal overflow (`scrollWidth == clientWidth`).
+
 ## Known gaps
 
 - No live model credential is configured here, so gates use the scripted test

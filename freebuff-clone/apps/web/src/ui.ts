@@ -1,4 +1,4 @@
-import { webThemeCss } from "@freebuff/shared";
+import { AppError, webThemeCss } from "@freebuff/shared";
 
 const escapeHtml = (value: string): string =>
   value
@@ -11,6 +11,20 @@ const escapeHtml = (value: string): string =>
 const BRAND_MARK = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
   <path d="M12 2.5 14.9 9l6.6 3-6.6 3L12 21.5 9.1 15 2.5 12l6.6-3L12 2.5Z" fill="currentColor" opacity=".92"/>
 </svg>`;
+
+/**
+ * The sponsored footer is a sibling of the build log, never a child: it carries
+ * the literal label and refuses markup that lost it.
+ */
+export const buildLogSponsorFooter = (adHtml: string): string => {
+  if (!adHtml.includes('class="sponsored-label"') || !adHtml.includes(">Sponsored<")) {
+    throw new AppError({
+      code: "validation_failed",
+      message: "Sponsored footer rendered without its literal label",
+    });
+  }
+  return `<footer class="log-sponsor" data-slot="web.builder-ad" aria-label="Sponsored">${adHtml}</footer>`;
+};
 
 /**
  * Landing page + app builder. Everything is server-rendered here except the
@@ -232,6 +246,67 @@ export const builderHtml = (options: {
   .timeline .step { color: var(--text); font-weight: 550; }
   .timeline .detail { color: var(--faint); }
 
+  /* ---------- studio: two-pane builder ---------- */
+  .studio {
+    display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 18px; align-items: stretch; margin-top: clamp(30px, 4vw, 42px);
+  }
+  .pane {
+    display: flex; flex-direction: column; min-width: 0;
+    border: 1px solid var(--border-strong); border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)), #0b0e17;
+    box-shadow: 0 32px 80px -34px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    padding: 18px;
+  }
+  .pane-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .pane-head h2 { margin: 0; font-size: 14.5px; font-weight: 620; letter-spacing: -0.01em; }
+  .pane-state { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .pane .composer { margin: 0; max-width: none; box-shadow: none; background: rgba(0, 0, 0, 0.28); }
+  .pane .examples { justify-content: flex-start; margin: 14px 0 0; max-width: none; }
+  .preview-frame {
+    position: relative; flex: 1; min-height: 340px; display: grid;
+    border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: #05070c;
+  }
+  .preview-frame iframe { width: 100%; height: 100%; min-height: 340px; border: 0; background: #fff; }
+  .preview-frame iframe[hidden] { display: none; }
+  .preview-empty { margin: auto; padding: 26px; text-align: center; color: var(--faint); font-size: 13.5px; max-width: 34ch; }
+  .preview-empty[hidden] { display: none; }
+  .pane-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .pane-actions[hidden] { display: none; }
+  .pane-actions .ghost-link { background: transparent; cursor: pointer; font: 12.5px/1.2 var(--font); }
+  .eject { margin-top: 12px; display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .eject[hidden] { display: none; }
+  .eject label { font-size: 12px; color: var(--muted); }
+  .eject input {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-strong);
+    background: rgba(0, 0, 0, 0.35); color: var(--text); font: 13px/1.4 var(--mono);
+  }
+  .eject input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .eject-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  .eject-row button { padding: 10px 16px; }
+  .eject-row .chip { padding: 10px 16px; border-radius: 12px; }
+
+  /* ---------- build log ---------- */
+  .log-region { margin-top: 18px; }
+  .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .log-row {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline;
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px;
+    background: rgba(255, 255, 255, 0.025); font-size: 13px;
+  }
+  .log-row[data-state="done"] .log-mark { color: var(--ok); }
+  .log-row[data-state="failed"] { border-color: rgba(255, 122, 144, 0.35); background: rgba(255, 122, 144, 0.07); }
+  .log-row[data-state="failed"] .log-mark { color: var(--danger); }
+  .log-mark { font-family: var(--mono); }
+  .log-name { font: 600 12.5px/1.2 var(--mono); color: var(--text); }
+  .log-detail { color: var(--faint); overflow-wrap: anywhere; }
+  .log-empty { margin: 0; color: var(--faint); font-size: 13px; }
+  .log-empty[hidden] { display: none; }
+  .log-sponsor { margin-top: 14px; }
+  .log-sponsor .sponsored-ad { padding: 14px 16px; }
+  .log-sponsor .sponsored-ad strong { font-size: 13.5px; }
+  .log-sponsor .sponsored-ad p { margin: 4px 0 6px; }
+
   /* ---------- content grid ---------- */
   .grid {
     display: grid; grid-template-columns: minmax(0, 1.72fr) minmax(280px, 1fr);
@@ -385,25 +460,69 @@ export const builderHtml = (options: {
     <span class="eyebrow"><span class="dot"></span> AI app builder</span>
     <h1>Describe an app.<br /><span class="grad">Ship it live.</span></h1>
     <p class="lead">One prompt. The builder writes a working app with sign-in, a real database and file uploads, then publishes it for you.</p>
+  </section>
 
-    <form class="composer" id="build">
-      <label for="prompt" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Describe the app you want</label>
-      <textarea id="prompt" name="prompt" placeholder="A recipe box where I can save recipes with a title, ingredients, steps and a photo, and mark favourites." spellcheck="false"></textarea>
-      <div class="composer-foot">
-        <span class="hint"><kbd>Ctrl</kbd><kbd>↵</kbd> to build · nothing is charged until publish</span>
-        <span class="spacer"></span>
-        <button id="submit" type="submit"><span class="spinner" aria-hidden="true"></span><span id="submit-label">Build app</span></button>
+  <div class="studio">
+    <section class="pane" aria-labelledby="prompt-title">
+      <div class="pane-head">
+        <h2 id="prompt-title">Describe the app</h2>
+        <span class="pane-state">one prompt · deploys live</span>
       </div>
-    </form>
+      <form class="composer" id="build">
+        <label for="prompt" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Describe the app you want</label>
+        <textarea id="prompt" name="prompt" placeholder="A recipe box where I can save recipes with a title, ingredients, steps and a photo, and mark favourites." spellcheck="false"></textarea>
+        <div class="composer-foot">
+          <span class="hint"><kbd>Ctrl</kbd><kbd>↵</kbd> · one hour is charged when you deploy</span>
+          <span class="spacer"></span>
+          <button id="submit" type="submit"><span class="spinner" aria-hidden="true"></span><span id="submit-label">Deploy app</span></button>
+        </div>
+      </form>
+      <div class="examples" aria-label="Example prompts">
+        <button class="chip" type="button" data-prompt="A recipe box where I can save recipes with a title, ingredients, steps and a photo, and mark favourites.">Recipe box</button>
+        <button class="chip" type="button" data-prompt="A freelance invoice tracker with clients, invoices, line items, paid/unpaid status and a monthly revenue summary.">Invoice tracker</button>
+        <button class="chip" type="button" data-prompt="A habit tracker where I check off daily habits, keep a streak and see a weekly heatmap.">Habit tracker</button>
+        <button class="chip" type="button" data-prompt="A small event RSVP app with events, guest lists and a photo upload for each event.">Event RSVPs</button>
+      </div>
+    </section>
 
-    <div class="examples" aria-label="Example prompts">
-      <button class="chip" type="button" data-prompt="A recipe box where I can save recipes with a title, ingredients, steps and a photo, and mark favourites.">Recipe box</button>
-      <button class="chip" type="button" data-prompt="A freelance invoice tracker with clients, invoices, line items, paid/unpaid status and a monthly revenue summary.">Invoice tracker</button>
-      <button class="chip" type="button" data-prompt="A habit tracker where I check off daily habits, keep a streak and see a weekly heatmap.">Habit tracker</button>
-      <button class="chip" type="button" data-prompt="A small event RSVP app with events, guest lists and a photo upload for each event.">Event RSVPs</button>
+    <section class="pane" aria-labelledby="preview-title">
+      <div class="pane-head">
+        <h2 id="preview-title">Preview</h2>
+        <span class="pane-state" id="preview-state">waiting for a deploy</span>
+      </div>
+      <div class="preview-frame">
+        <p class="preview-empty" id="preview-empty">Your app appears here as soon as the build deploys.</p>
+        <iframe id="preview" title="Live preview of the generated app" hidden sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+      </div>
+      <div class="pane-actions" id="app-actions" hidden>
+        <a class="ghost-link" id="open-app" href="#" target="_blank" rel="noopener noreferrer">Open app</a>
+        <a class="ghost-link" id="download-source" href="#">Download source</a>
+        <button class="ghost-link" type="button" id="eject-toggle" aria-expanded="false" aria-controls="eject-form">Eject → GitHub</button>
+      </div>
+      <form class="eject" id="eject-form" hidden>
+        <p class="hint">Creates a private repository and pushes the generated source. The token is used for this request only and is never stored.</p>
+        <label for="eject-name">Repository name</label>
+        <input id="eject-name" name="name" type="text" placeholder="my-app" autocomplete="off" />
+        <label for="eject-token">GitHub token</label>
+        <input id="eject-token" name="token" type="password" placeholder="ghp_…" autocomplete="off" />
+        <div class="eject-row">
+          <button type="submit" id="eject-submit">Eject to GitHub</button>
+          <button type="button" class="chip" id="eject-cancel">Cancel</button>
+        </div>
+        <p class="hint" id="eject-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </div>
+
+  <section class="panel log-region" aria-labelledby="log-title">
+    <div class="panel-head">
+      <h2 id="log-title">Build log</h2>
+      <span class="count" id="log-state">idle</span>
     </div>
-
-    <div id="status" role="status" aria-live="polite"></div>
+    <p class="panel-sub">Named steps stream in as the build runs: spec → scaffolded → schema → auth → deployed.</p>
+    <ol class="log" id="build-log" data-slot="build-log"></ol>
+    <p class="log-empty" id="log-empty">Nothing built yet. Describe an app and press Deploy.</p>
+    ${options.adHtml === undefined ? "" : buildLogSponsorFooter(options.adHtml)}
   </section>
 
   <div class="grid">
@@ -429,7 +548,6 @@ export const builderHtml = (options: {
         </dl>
         ${options.modelReady ? "" : `<div class="callout" style="margin-top:12px">No model provider is configured. Set <code>DEEPSEEK_API_KEY</code>, <code>OPENAI_API_KEY</code> or <code>ANTHROPIC_API_KEY</code> on the server.</div>`}
       </div>
-      ${options.adHtml ?? ""}
     </aside>
   </div>
 </main>
@@ -452,9 +570,21 @@ export const builderHtml = (options: {
   var prompt = document.getElementById('prompt');
   var submit = document.getElementById('submit');
   var submitLabel = document.getElementById('submit-label');
-  var status = document.getElementById('status');
   var list = document.getElementById('apps-list');
   var count = document.getElementById('apps-count');
+  var log = document.getElementById('build-log');
+  var logEmpty = document.getElementById('log-empty');
+  var logState = document.getElementById('log-state');
+  var previewFrame = document.getElementById('preview');
+  var previewEmpty = document.getElementById('preview-empty');
+  var previewState = document.getElementById('preview-state');
+  var actions = document.getElementById('app-actions');
+  var openApp = document.getElementById('open-app');
+  var downloadSource = document.getElementById('download-source');
+  var ejectToggle = document.getElementById('eject-toggle');
+  var ejectForm = document.getElementById('eject-form');
+  var ejectStatus = document.getElementById('eject-status');
+  var currentApp = null;
 
   function el(tag, className, text) {
     var node = document.createElement(tag);
@@ -493,13 +623,13 @@ export const builderHtml = (options: {
       body.appendChild(el('p', 'app-meta', (app.spec.tagline || '') + ' · ' + new Date(app.createdAt).toLocaleDateString()));
       item.appendChild(body);
 
-      var actions = el('div', 'app-actions');
-      actions.appendChild(el('span', app.status === 'deployed' ? 'badge' : 'badge is-muted', app.status));
+      var row = el('div', 'app-actions');
+      row.appendChild(el('span', app.status === 'deployed' ? 'badge' : 'badge is-muted', app.status));
       var source = el('a', 'ghost-link', 'Source');
       source.href = '/api/apps/' + app.id + '/eject';
       source.title = 'Download the generated source';
-      actions.appendChild(source);
-      item.appendChild(actions);
+      row.appendChild(source);
+      item.appendChild(row);
 
       list.appendChild(item);
     });
@@ -522,68 +652,109 @@ export const builderHtml = (options: {
     });
   }
 
-  function showNotice(kind, title, message) {
-    status.textContent = '';
-    var box = el('div', 'notice ' + kind);
-    var icon = el('span', 'dot' + (kind === 'error' ? ' is-off' : ''));
-    box.appendChild(icon);
-    var copy = el('div');
-    copy.appendChild(el('strong', '', title));
-    if (message) copy.appendChild(el('div', '', message));
-    box.appendChild(copy);
-    status.appendChild(box);
-    return copy;
-  }
-
-  function renderTimeline(timeline) {
-    var items = el('ul', 'timeline');
-    timeline.forEach(function (step) {
-      var state = String(step.status || '').toLowerCase();
-      var stateClass = state.indexOf('fail') >= 0 || state.indexOf('error') >= 0
-        ? ' is-failed'
-        : state === 'done' || state === 'ok' || state === 'complete' ? ' is-done' : '';
-      var row = el('li', stateClass);
-      var text = el('span');
-      text.appendChild(el('span', 'step', step.step));
-      text.appendChild(el('span', 'detail', ' — ' + step.status + (step.detail ? ' · ' + step.detail : '')));
-      row.appendChild(text);
-      items.appendChild(row);
-    });
-    return items;
-  }
-
   function setBusy(busy) {
     submit.disabled = busy;
     submit.setAttribute('aria-busy', busy ? 'true' : 'false');
-    submitLabel.textContent = busy ? 'Building…' : 'Build app';
+    submitLabel.textContent = busy ? 'Deploying…' : 'Deploy app';
+  }
+
+  function clearLog() {
+    log.textContent = '';
+    if (logEmpty) logEmpty.hidden = true;
+    logState.textContent = 'running';
+  }
+
+  function logRow(step, detail, state) {
+    var row = el('li', 'log-row');
+    row.setAttribute('data-step', step);
+    row.setAttribute('data-state', state);
+    row.appendChild(el('span', 'log-mark', state === 'failed' ? '✗' : '✓'));
+    row.appendChild(el('span', 'log-name', step));
+    if (detail) row.appendChild(el('span', 'log-detail', detail));
+    log.appendChild(row);
+    return row;
+  }
+
+  function appendStep(step) {
+    var value = String(step.status || '').toLowerCase();
+    var state = value === 'failed' || value === 'error' ? 'failed' : 'done';
+    return logRow(step.step, step.detail || '', state);
+  }
+
+  function appendError(message) {
+    logRow('error', message, 'failed');
+    logState.textContent = 'failed';
+  }
+
+  function showApp(app, url) {
+    currentApp = app;
+    previewFrame.src = url;
+    previewFrame.hidden = false;
+    if (previewEmpty) previewEmpty.hidden = true;
+    previewState.textContent = 'deployed';
+    openApp.href = url;
+    downloadSource.href = '/api/apps/' + app.id + '/eject';
+    actions.hidden = false;
+    logState.textContent = 'deployed';
+    loadApps();
+  }
+
+  function handleEvent(event) {
+    if (event.type === 'step') { appendStep(event); return; }
+    if (event.type === 'done') { showApp(event.app, event.url); return; }
+    if (event.type === 'error') { appendError(event.message || 'Build failed'); }
+  }
+
+  function readEvents(response) {
+    if (!response.body || !response.body.getReader) {
+      return response.json().then(function (body) {
+        appendError(body.message || 'Build failed');
+      });
+    }
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    function pump() {
+      return reader.read().then(function (chunk) {
+        if (chunk.done) {
+          if (buffer.trim()) {
+            try { handleEvent(JSON.parse(buffer)); } catch (ignored) {}
+          }
+          return;
+        }
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var lines = buffer.split('\\n');
+        buffer = lines.pop() || '';
+        lines.forEach(function (line) {
+          if (!line.trim()) return;
+          try { handleEvent(JSON.parse(line)); } catch (ignored) {}
+        });
+        return pump();
+      });
+    }
+    return pump();
   }
 
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     if (!prompt.value.trim() || submit.disabled) return;
     setBusy(true);
-    showNotice('', 'Building your app', 'Designing, scaffolding and deploying. This usually takes under a minute.');
-    fetch('/api/apps', {
+    clearLog();
+    previewState.textContent = 'building';
+    fetch('/api/apps/build', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ prompt: prompt.value })
     }).then(function (response) {
-      return response.json().then(function (body) {
-        if (!response.ok) throw new Error(body.message || 'Build failed');
-        return body;
-      });
-    }).then(function (body) {
-      var copy = showNotice('ok', 'Deployed ' + body.app.spec.name, 'Your app is live. Every build step passed.');
-      copy.appendChild(renderTimeline(body.timeline || []));
-      var link = el('a', '', 'Open ' + body.app.spec.name + ' →');
-      link.href = body.url;
-      link.style.display = 'inline-block';
-      link.style.marginTop = '10px';
-      copy.appendChild(link);
-      prompt.value = '';
-      loadApps();
+      if (!response.ok) {
+        return response.json().then(function (body) {
+          throw new Error(body.message || 'Build failed');
+        });
+      }
+      return readEvents(response);
     }).catch(function (error) {
-      showNotice('error', 'Build failed', error.message);
+      appendError(error.message || 'Build failed');
+      previewState.textContent = 'failed';
     }).finally(function () { setBusy(false); });
   });
 
@@ -602,8 +773,56 @@ export const builderHtml = (options: {
     });
   });
 
+  if (ejectToggle && ejectForm) {
+    ejectToggle.addEventListener('click', function () {
+      var opening = ejectForm.hidden;
+      ejectForm.hidden = !opening;
+      ejectToggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    });
+  }
+
+  var ejectCancel = document.getElementById('eject-cancel');
+  if (ejectCancel && ejectForm && ejectToggle) {
+    ejectCancel.addEventListener('click', function () {
+      ejectForm.hidden = true;
+      ejectToggle.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  if (ejectForm) {
+    ejectForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      if (!currentApp) {
+        if (ejectStatus) ejectStatus.textContent = 'Deploy an app first.';
+        return;
+      }
+      var token = document.getElementById('eject-token');
+      var name = document.getElementById('eject-name');
+      if (ejectStatus) ejectStatus.textContent = 'Pushing to GitHub…';
+      fetch('/api/apps/' + currentApp.id + '/eject/github', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          token: token ? token.value : '',
+          name: name && name.value.trim() ? name.value.trim() : undefined
+        })
+      }).then(function (response) {
+        return response.json().then(function (body) { return { ok: response.ok, body: body }; });
+      }).then(function (result) {
+        if (!result.ok) {
+          if (ejectStatus) ejectStatus.textContent = result.body.message || 'Eject failed.';
+          return;
+        }
+        if (ejectStatus) ejectStatus.textContent = 'Pushed to ' + result.body.url;
+      }).catch(function () {
+        if (ejectStatus) ejectStatus.textContent = 'Network error. Try again.';
+      });
+    });
+  }
+
   loadApps();
 })();
+</script>
 </script>
 </body>
 </html>`;

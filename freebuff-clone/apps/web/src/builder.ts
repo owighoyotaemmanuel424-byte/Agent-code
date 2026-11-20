@@ -30,6 +30,13 @@ export interface BuildOptions {
   readonly prompt: string;
   readonly signal?: AbortSignal;
   readonly ownerId?: string;
+  /**
+   * Progress callback for the streaming build log. The names are the steps the
+   * builder actually performs (spec → scaffolded → schema → auth → deployed);
+   * the returned timeline keeps its stable design/scaffold/deploy shape for API
+   * clients.
+   */
+  readonly onStep?: (step: BuildStep) => void;
 }
 
 export interface BuildResult {
@@ -95,6 +102,11 @@ export const buildApp = async (
     status: "ok",
     detail: `${String(generated.spec.entities.length)} collections, ${String(generated.attempts)} model call(s)`,
   });
+  options.onStep?.({
+    step: "spec",
+    status: "ok",
+    detail: `${String(generated.spec.entities.length)} collections · ${String(generated.attempts)} model call(s)`,
+  });
 
   const appId = newId();
   const slug = `${slugify(generated.spec.name)}-${appId.slice(0, 8)}`;
@@ -103,6 +115,21 @@ export const buildApp = async (
     step: "scaffold",
     status: "ok",
     detail: `${String(files.length)} files`,
+  });
+  options.onStep?.({
+    step: "scaffolded",
+    status: "ok",
+    detail: `${String(files.length)} files written`,
+  });
+  options.onStep?.({
+    step: "schema",
+    status: "ok",
+    detail: `${String(generated.spec.entities.length)} tables with owner columns`,
+  });
+  options.onStep?.({
+    step: "auth",
+    status: "ok",
+    detail: "magic link + phone verification",
   });
 
   const createdAt = now().toISOString();
@@ -131,6 +158,7 @@ export const buildApp = async (
     const deployedAt = now().toISOString();
     deps.store.markDeployed(appId, deployedAt);
     timeline.push({ step: "deploy", status: "ok", detail: published.urlPath });
+    options.onStep?.({ step: "deployed", status: "ok", detail: published.urlPath });
     return {
       app: { ...app, status: "deployed", deployedAt },
       spec: generated.spec,

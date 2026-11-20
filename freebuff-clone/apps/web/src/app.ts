@@ -22,6 +22,11 @@ export interface AppBuilder {
     readonly signal?: AbortSignal;
     readonly plan: Plan;
     readonly ownerId?: string;
+    readonly onStep?: (step: {
+      readonly step: string;
+      readonly status: string;
+      readonly detail?: string;
+    }) => void;
   }): Promise<{
     readonly app: AppRecord;
     readonly urlPath: string;
@@ -302,6 +307,65 @@ export const createWebApp = (
       message: "Redirecting you back to the app…",
       script: `localStorage.setItem(${scriptJson(key)},${scriptJson(sessionToken)});location.replace(${scriptJson(redirect)});`,
     });
+  };
+
+  /**
+   * Shared guard for both build routes: provider presence, session, phone
+   * verification and the authoritative hour charge. Returns the request's
+   * prompt so the JSON and streaming routes cannot drift.
+   */
+  const prepareBuild = async (
+    request: Request,
+  ): Promise<{
+    readonly prompt: string;
+    readonly plan: Plan;
+    readonly ownerId?: string;
+  }> => {
+    if (options.builder === undefined) {
+      throw new AppError({
+        code: "provider_error",
+        message:
+          "No model provider is configured. Set DEEPSEEK_API_KEY, OPENAI_API_KEY or ANTHROPIC_API_KEY.",
+      });
+    }
+    const user =
+      options.quota === undefined ? undefined : await requireUser(request);
+    const body = await readJson(request);
+    const prompt = typeof body["prompt"] === "string" ? body["prompt"] : "";
+
+    let plan: Plan = user?.plan ?? "free";
+    if (options.quota !== undefined && user !== undefined) {
+      const evaluation = await options.quota.beginHour({
+        userId: user.id,
+        plan: user.plan,
+        countryCode: user.plan === "free" ? (options.countryCode ?? "US") : "US",
+        phoneVerified: user.phoneVerified,
+      });
+      if (!evaluation.decision.allowed) {
+        const reason = evaluation.decision.reason;
+        throw new AppError({
+          code:
+            reason === "quota_exhausted"
+              ? "quota_exceeded"
+              : reason === "phone_verification_required"
+                ? "verification_required"
+                : "forbidden",
+          message:
+            reason === "quota_exhausted"
+              ? `Hour quota exhausted. It resets at ${evaluation.snapshot.resetsAt}`
+              : reason === "phone_verification_required"
+                ? "Verify your phone number to keep using the free tier"
+                : "This account is suspended",
+        });
+      }
+      plan = user.plan;
+    }
+
+    return {
+      prompt,
+      plan,
+      ...(user === undefined ? {} : { ownerId: String(user.id) }),
+    };
   };
 
   return {
@@ -588,6 +652,61 @@ export const createWebApp = (
           return notFound();
         }
 
+        if (parts.length === 3 && parts[2] === "build" && request.method === "POST") {
+          const prepared = await prepareBuild(request);
+          const builder = options.builder;
+          if (builder === undefined) {
+            throw new AppError({ code: "provider_error", message: "No model provider" });
+          }
+          const encoder = new TextEncoder();
+          const stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+              const send = (event: Record<string, unknown>): void => {
+                controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+              };
+              void builder
+                .build({
+                  ...prepared,
+                  onStep: (step) => {
+                    send({
+                      type: "step",
+                      step: step.step,
+                      status: step.status,
+                      ...(step.detail === undefined ? {} : { detail: step.detail }),
+                    });
+                  },
+                })
+                .then((result) => {
+                  send({
+                    type: "done",
+                    app: publicApp(result.app, request.url),
+                    url: new URL(result.urlPath, request.url).toString(),
+                    timeline: result.timeline,
+                    usage: result.usage,
+                  });
+                })
+                .catch((error: unknown) => {
+                  send({
+                    type: "error",
+                    code: error instanceof AppError ? error.code : "internal",
+                    message: error instanceof Error ? error.message : "Build failed",
+                  });
+                })
+                .finally(() => {
+                  controller.close();
+                });
+            },
+          });
+          return new Response(stream, {
+            status: 200,
+            headers: {
+              "content-type": "application/x-ndjson; charset=utf-8",
+              "cache-control": "no-store",
+              "x-accel-buffering": "no",
+            },
+          });
+        }
+
         if (parts.length === 2) {
           if (request.method === "GET") {
             const user =
@@ -599,52 +718,12 @@ export const createWebApp = (
             });
           }
           if (request.method === "POST") {
-            if (options.builder === undefined) {
-              throw new AppError({
-                code: "provider_error",
-                message:
-                  "No model provider is configured. Set DEEPSEEK_API_KEY, OPENAI_API_KEY or ANTHROPIC_API_KEY.",
-              });
+            const prepared = await prepareBuild(request);
+            const builder = options.builder;
+            if (builder === undefined) {
+              throw new AppError({ code: "provider_error", message: "No model provider" });
             }
-            const user =
-              options.quota === undefined ? undefined : await requireUser(request);
-            const body = await readJson(request);
-            const prompt = typeof body["prompt"] === "string" ? body["prompt"] : "";
-
-            let plan: Plan = user?.plan ?? "free";
-            if (options.quota !== undefined && user !== undefined) {
-              const evaluation = await options.quota.beginHour({
-                userId: user.id,
-                plan: user.plan,
-                countryCode:
-                  user.plan === "free" ? (options.countryCode ?? "US") : "US",
-                phoneVerified: user.phoneVerified,
-              });
-              if (!evaluation.decision.allowed) {
-                const reason = evaluation.decision.reason;
-                throw new AppError({
-                  code:
-                    reason === "quota_exhausted"
-                      ? "quota_exceeded"
-                      : reason === "phone_verification_required"
-                        ? "verification_required"
-                        : "forbidden",
-                  message:
-                    reason === "quota_exhausted"
-                      ? `Hour quota exhausted. It resets at ${evaluation.snapshot.resetsAt}`
-                      : reason === "phone_verification_required"
-                        ? "Verify your phone number to keep using the free tier"
-                        : "This account is suspended",
-                });
-              }
-              plan = user.plan;
-            }
-
-            const result = await options.builder.build({
-              prompt,
-              plan,
-              ...(user === undefined ? {} : { ownerId: String(user.id) }),
-            });
+            const result = await builder.build(prepared);
             return json(201, {
               app: publicApp(result.app, request.url),
               url: new URL(result.urlPath, request.url).toString(),
