@@ -124,6 +124,45 @@ surface through the public SDK; the review
 - Tests: 40 new tests (matrix, ad engine, phone, billing, model selection,
   Phase 5 gate, security review).
 
+## Phase 2 UI (design-system pass)
+
+Screen inventory, rendered headless from one `Screen` tree and interactively
+through OpenTUI:
+
+| Screen | Builder | Ad slot | Evidence |
+| --- | --- | --- | --- |
+| Device auth | `buildDeviceAuthScreen` | none | code, URL and waiting state in `screens.test.ts` |
+| Model picker | `buildModelPickerScreen` | one row, sibling of the list | UNLIMITED / PREMIUM groups, `▸ (recommended)`, paid hint |
+| Project picker | `buildProjectPickerScreen` | one row, sibling of the list | branch label; missing / empty / non-git / permission reasons inline |
+| Agent view | `buildAgentScreen` | one row between stream and composer | thinking text, tool cards, `+`/`-` diff glyphs, status bar |
+| Quota dashboard | `buildQuotaDashboardScreen` | one banner above the meter | `█░` bar, "Resets in …", unlimited vs metered, upgrade banner |
+
+Tests (all passing):
+
+- `tests/unit/shared/theme.test.ts` — token roles, ANSI mapping (39/34/196/214/244),
+  CSS variable emission, no-color painting, named run states.
+- `tests/integration/cli/screens.test.ts` — every screen renders headless; stream
+  subtree contains no ad node or `AdRow` element; an ad inside the stream, two
+  ads, a missing label and a short row are refused; rotating creatives keeps
+  line count, ad row position and post-ad lines identical; no ANSI without
+  colour; folder inspection for missing / empty / non-git / valid repos.
+- `tests/integration/cli/ui.test.tsx` — keyboard-only flow: model picker →
+  project picker → prompt → completed run → quota dashboard (ctrl+u) → Esc quits.
+- `tests/unit/web/theme.test.ts` — the web and cloud pages emit the shared
+  `:root` token block.
+
+Accessibility checks run: every state carries a glyph and a word (idle,
+thinking, tool running, diff arriving, error, done); diffs carry `+`/`-` as well
+as colour; `--no-color` and `NO_COLOR` produce escape-free, still-parseable
+output; the pickers are operable with arrows, Enter and single-key shortcuts
+with no mouse.
+
+Ad-placement audit: CLI model picker, project picker, agent view and quota
+dashboard each render at most one sponsored row; it is a sibling of the list or
+stream, fixed at four rows, labelled `Sponsored`, and validated at render time.
+Web builder and cloud dashboard keep their existing labelled banner; no ad is
+inside a build log, diff, tool card or preview pane.
+
 ## Known gaps
 
 - No live model credential is configured here, so gates use the scripted test

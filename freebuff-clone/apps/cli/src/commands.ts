@@ -1,4 +1,6 @@
 import type { Command } from "commander";
+import { selectSponsoredAd } from "@freebuff/ads";
+import { defaultModelCatalog } from "@freebuff/llm-providers";
 import { AppError } from "@freebuff/shared";
 import { loadConfig } from "./core/config";
 import {
@@ -15,6 +17,12 @@ import { createLocalPlatform } from "./core/platform";
 import { addProject, pickProject, setDefaultProject } from "./core/projects";
 import { createHeadlessRenderer } from "./core/render";
 import { runChatTurn } from "./core/session";
+import { resolveThemeEnv } from "./core/theme-env";
+import { renderScreenText } from "./ui/screens/render";
+import {
+  buildDeviceAuthScreen,
+  buildQuotaDashboardScreen,
+} from "./ui/screens/screens";
 
 interface AuthLoginOptions {
   readonly email?: string;
@@ -85,6 +93,31 @@ export const registerCommands = (program: Command): void => {
           }
 
           const link = await platform.requestMagicLink(options.email);
+          if (process.stdin.isTTY === true) {
+            out(
+              renderScreenText(
+                buildDeviceAuthScreen({
+                  email: options.email,
+                  code: link.token,
+                  url: "https://freebuff.dev/device",
+                  status: "waiting",
+                }),
+                resolveThemeEnv(program.opts()),
+              ),
+            );
+            const { createInterface } = await import("node:readline/promises");
+            const rl = createInterface({ input: process.stdin, output: process.stdout });
+            const token = (await rl.question("Paste the device code: ")).trim();
+            rl.close();
+            const session = await platform.completeMagicLink(token);
+            await saveCredentials(paths, {
+              token: session.sessionToken,
+              userId: session.user.id,
+              email: session.user.email,
+            });
+            out(`Signed in as ${session.user.email}\n`);
+            return;
+          }
           out(
             [
               `Magic link token (valid until ${link.expiresAt}):`,
@@ -310,6 +343,15 @@ export const registerCommands = (program: Command): void => {
               project,
               modelId,
               countryCode: config.countryCode,
+              plan: user.plan,
+              models: defaultModelCatalog.models.map((model) => ({
+                id: model.id,
+                displayName: model.displayName,
+                provider: model.provider,
+                planTiers: model.planTiers,
+                allowed: registry.isAllowed(model.id, user.plan),
+              })),
+              recommendedModelId: chooseDefaultModel(registry, user.plan),
               history,
               inventory: defaultAdInventory,
               resolveModel,
@@ -397,17 +439,39 @@ export const registerCommands = (program: Command): void => {
             countryCode: config.countryCode,
             phoneVerified: user.phoneVerified,
           });
-          out(
-            [
-              `Plan:      ${snapshot.plan}`,
-              `Country:   ${snapshot.countryCode} (${snapshot.timeZone})`,
-              `Allowance: ${String(snapshot.hoursPerDay)}h per day`,
-              `Used:      ${formatHours(snapshot.consumedSecondsToday)}h`,
-              `Resets:    ${snapshot.resetsAt}`,
-              `Status:    ${decision.allowed ? "available" : decision.reason}`,
-              `Ads:       ${snapshot.adsEnabled ? "shown on the free tier" : "none"}`,
-            ].join("\n") + "\n",
+          const theme = resolveThemeEnv(program.opts());
+          const sponsored = selectSponsoredAd(
+            {
+              slot: "cli.startup",
+              plan: user.plan,
+              topics: [],
+              seed: String(user.id),
+            },
+            defaultAdInventory,
           );
+          out(
+            renderScreenText(
+              buildQuotaDashboardScreen({
+                plan: snapshot.plan,
+                countryCode: snapshot.countryCode,
+                timeZone: snapshot.timeZone,
+                hoursPerDay: snapshot.hoursPerDay,
+                consumedSeconds: snapshot.consumedSecondsToday,
+                resetsAt: snapshot.resetsAt,
+                now: new Date(),
+                unlimitedModels: defaultModelCatalog.models
+                  .filter((model) => model.planTiers.includes("free"))
+                  .map((model) => model.displayName),
+                meteredModels: defaultModelCatalog.models
+                  .filter((model) => !model.planTiers.includes("free"))
+                  .map((model) => model.displayName),
+                barWidth: Math.min(28, Math.max(12, theme.width - 36)),
+                ...(sponsored === undefined ? {} : { ad: sponsored.ad }),
+              }),
+              theme,
+            ),
+          );
+          out(`${decision.allowed ? "Available" : `Blocked: ${decision.reason}`}\n`);
         }),
     );
 };

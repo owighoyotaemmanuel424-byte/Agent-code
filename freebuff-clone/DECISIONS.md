@@ -210,3 +210,52 @@ in-place `ALTER TABLE` when the column is missing, plus an
 `(owner_id, created_at)` index. Legacy rows keep `NULL`, which the ownership
 check treats as unowned; new builds always write the verified account id, and
 listing/filtering happens in SQL.
+
+## 0012 — One consolidated sponsored row, never two corners
+
+CLI and Desktop render exactly one sponsored slot per working view, as a
+fixed-height sibling row directly between the agent stream and the composer.
+It is not inside the scrollbox, the diff viewer, a tool card or the preview
+pane. The model picker and project picker use the same row at the bottom of
+their lists; the quota dashboard and the web surfaces use a banner in the same
+reserved form.
+
+Why: a single row is trivial to reserve (four rows, borders included), trivial
+to assert ("no ad node inside the stream subtree"), and it survives an 80-column
+terminal. Two corners would need a second reservation, a second label and a
+second layout-shift test on every surface, and would break the one-visible-ad
+rule on narrow terminals. Recorded before the Phase 2 UI was written.
+
+Enforcement: `apps/cli/src/ui/screens/types.ts` (`validateScreen`) refuses a
+tree that puts an ad node under a `stream` region, renders two ad nodes, drops
+the literal `Sponsored` label or changes the reserved height. `streamElements`
+throws on an ad child, and both renderers call validation first.
+
+## D29 — One semantic token layer for terminal and web
+
+`packages/shared/src/theme` holds the palette once: `terminalTheme` maps each
+role to an ANSI 256 index and a hex value, `webTheme` maps the same roles to CSS
+custom properties, and `webThemeCss()` emits the `:root` block that the web and
+cloud pages interpolate. The CLI paints with the ANSI index; OpenTUI and the
+web pages use the hex value / variable. Adding a role means editing one table.
+
+| Role | ANSI | CSS variable | Hex |
+| --- | --- | --- | --- |
+| surface | fg-234 | `--surface` | `#07090f` |
+| surface-raised | fg-236 | `--surface-raised` | `#121622` |
+| text-primary | fg-255 | `--text-primary` | `#e9edf7` |
+| text-secondary | fg-250 | `--text-secondary` | `#c3cad9` |
+| text-muted | fg-244 | `--text-muted` | `#9aa5b8` |
+| accent | fg-39 | `--accent` | `#7c8cff` |
+| success | fg-34 | `--success` | `#4ade80` |
+| danger | fg-196 | `--danger` | `#ff7a90` |
+| warning | fg-214 | `--warning` | `#fbbf24` |
+| sponsored | fg-244 | `--sponsored` | `#9aa5b8` |
+
+## D30 — Screens are data, rendered twice
+
+Each CLI screen is built as a `Screen` tree (regions, fixed heights, list
+groups) and rendered by two walkers: a plain-text renderer for headless CI and
+`--no-color`, and OpenTUI elements for the TUI. The structural rules are
+asserted against that tree, which is why the component-tree, label and
+layout-shift tests do not need a terminal.

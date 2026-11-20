@@ -1,9 +1,79 @@
-import { stat } from "node:fs/promises";
-import { basename, resolve } from "node:path";
+import { readFile, readdir, stat } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
 import { AppError, newId, nowIso, projectIdSchema } from "@freebuff/shared";
 import { loadConfig, saveConfig } from "./config";
 import type { CliConfig, ProjectEntry } from "./config";
 import type { CliPaths } from "./paths";
+
+/**
+ * Why a registered folder cannot be opened, in one short phrase plus an inline
+ * recovery path. Never throws: the picker renders the reason in text-muted.
+ */
+export interface ProjectInspection {
+  readonly projectId: string;
+  readonly path: string;
+  readonly ok: boolean;
+  readonly branch?: string;
+  readonly reason?: string;
+  readonly recovery?: string;
+}
+
+const gitBranch = async (path: string): Promise<string> => {
+  const head = await readFile(join(path, ".git", "HEAD"), "utf8").catch(() => undefined);
+  const trimmed = head?.trim() ?? "";
+  const prefix = "ref: refs/heads/";
+  return trimmed.startsWith(prefix) ? trimmed.slice(prefix.length) : "detached";
+};
+
+export const inspectProject = async (
+  project: ProjectEntry,
+): Promise<ProjectInspection> => {
+  const base = { projectId: String(project.id), path: project.path };
+  const info = await stat(project.path).catch(() => undefined);
+  if (info === undefined) {
+    return {
+      ...base,
+      ok: false,
+      reason: "folder is missing",
+      recovery: "Re-add it with freebuff projects add <path>.",
+    };
+  }
+  if (!info.isDirectory()) {
+    return {
+      ...base,
+      ok: false,
+      reason: "not a directory",
+      recovery: "Point the entry at a folder: freebuff projects add <path>.",
+    };
+  }
+  const entries = await readdir(project.path).catch(() => undefined);
+  if (entries === undefined) {
+    return {
+      ...base,
+      ok: false,
+      reason: "permission denied",
+      recovery: "Fix the folder permissions, or choose another project.",
+    };
+  }
+  if (entries.length === 0) {
+    return {
+      ...base,
+      ok: false,
+      reason: "empty folder",
+      recovery: "Run git init here and add files, then reopen.",
+    };
+  }
+  const git = await stat(join(project.path, ".git")).catch(() => undefined);
+  if (git === undefined) {
+    return {
+      ...base,
+      ok: false,
+      reason: "not a git repository",
+      recovery: "Run git init here to track changes, then reopen.",
+    };
+  }
+  return { ...base, ok: true, branch: await gitBranch(project.path) };
+};
 
 export interface AddProjectInput {
   readonly path: string;

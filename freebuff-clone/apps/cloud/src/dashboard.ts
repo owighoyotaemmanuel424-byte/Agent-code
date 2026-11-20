@@ -1,3 +1,5 @@
+import { webThemeCss } from "@freebuff/shared";
+
 const escapeHtml = (value: string): string =>
   value
     .replace(/&/g, "&amp;")
@@ -46,16 +48,17 @@ export const dashboardHtml = (options: {
   *, *::before, *::after { box-sizing: border-box; }
   :root {
     color-scheme: dark;
-    --bg: #07090f;
-    --text: #e9edf7;
-    --muted: #9aa5b8;
+    /* Shared token layer: packages/shared/src/theme (ANSI 256 + CSS vars). */
+    ${webThemeCss()}
+    --bg: var(--surface);
+    --text: var(--text-primary);
+    --muted: var(--text-muted);
     --faint: #6d778a;
     --border: rgba(255, 255, 255, 0.09);
     --border-strong: rgba(255, 255, 255, 0.18);
     --panel: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015));
-    --accent: #7c8cff;
     --accent-2: #22d3ee;
-    --ok: #4ade80;
+    --ok: var(--success);
     --radius: 18px;
     --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;

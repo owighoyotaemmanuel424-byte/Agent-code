@@ -5,6 +5,7 @@ import { registerCommands } from "./commands";
 const program = new Command()
   .name("freebuff")
   .description("Ad-supported coding agent for the terminal")
+  .option("--no-color", "render screens with glyphs and text only")
   .version("0.0.0");
 
 registerCommands(program);

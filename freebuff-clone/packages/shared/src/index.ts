@@ -9,5 +9,6 @@ export * from "./resilience";
 export * from "./result";
 export * from "./session";
 export * from "./surfaces";
+export * from "./theme";
 export * from "./time";
 export * from "./tool";
