@@ -170,6 +170,52 @@ const publicApp = (app: AppRecord, origin: string): Record<string, unknown> => (
   usage: { inputTokens: app.inputTokens, outputTokens: app.outputTokens },
 });
 
+/** Minimal branded shell for the one-off HTML responses (auth, 404). */
+const simplePage = (options: {
+  readonly title: string;
+  readonly heading: string;
+  readonly message: string;
+  readonly linkHref?: string;
+  readonly linkLabel?: string;
+  readonly script?: string;
+}): string => `<!doctype html>
+<html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>${options.title}</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+    background: #07090f; color: #e9edf7;
+    font: 15px/1.6 "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  body::before { content: ""; position: fixed; inset: 0; z-index: -1;
+    background: radial-gradient(760px 460px at 12% 0%, rgba(124,140,255,.24), transparent 65%),
+      radial-gradient(700px 420px at 88% 10%, rgba(34,211,238,.16), transparent 62%); }
+  .card { width: min(440px, 100%); border: 1px solid rgba(255,255,255,.1); border-radius: 20px;
+    padding: 30px 28px; text-align: center;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    box-shadow: 0 30px 70px -30px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.07); }
+  .mark { display: grid; place-items: center; width: 42px; height: 42px; margin: 0 auto 16px;
+    border-radius: 13px; color: #fff;
+    background: linear-gradient(140deg, #7c8cff, #22d3ee 65%, #a855f7);
+    box-shadow: 0 8px 22px rgba(124,140,255,.35), inset 0 1px 0 rgba(255,255,255,.4); }
+  .mark svg { width: 22px; height: 22px; }
+  h1 { margin: 0 0 8px; font-size: 21px; letter-spacing: -.02em; font-weight: 630; }
+  p { margin: 0; color: #9aa5b8; font-size: 14px; }
+  a.btn { display: inline-block; margin-top: 20px; padding: 10px 18px; border-radius: 11px;
+    font-weight: 600; font-size: 13.5px; color: #080b14; text-decoration: none;
+    background: linear-gradient(135deg, #aab4ff, #7c8cff 45%, #22d3ee); }
+</style></head>
+<body><main class="card">
+  <span class="mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 14.9 9l6.6 3-6.6 3L12 21.5 9.1 15 2.5 12l6.6-3L12 2.5Z" fill="currentColor"/></svg></span>
+  <h1>${options.heading}</h1>
+  <p>${options.message}</p>
+  ${options.linkHref === undefined || options.linkLabel === undefined ? "" : `<a class="btn" href="${options.linkHref}">${options.linkLabel}</a>`}
+</main>${options.script === undefined ? "" : `
+<script>${options.script}</script>`}
+</body></html>`;
+
 /**
  * The web surface: builder API, deployed static apps, generated-app auth, data
  * and file APIs. Handlers take a Request and return a Response so the whole
@@ -224,7 +270,10 @@ export const createWebApp = (
     const relative = rest.length === 0 ? "index.html" : rest.join("/");
     const target = resolve(buildRoot, relative);
     if (!target.startsWith(`${buildRoot}${sep}`)) {
-      return html(404, "<h1>Not found</h1>");
+      return html(
+        404,
+        simplePage({ title: "Not found", heading: "Page not found", message: "This file is not part of the published app." }),
+      );
     }
     try {
       const bytes = await readFile(target);
@@ -238,16 +287,21 @@ export const createWebApp = (
         },
       });
     } catch {
-      return html(404, "<h1>Not found</h1>");
+      return html(
+        404,
+        simplePage({ title: "Not found", heading: "Page not found", message: "This file is not part of the published app." }),
+      );
     }
   };
 
   const completePage = (app: AppRecord, sessionToken: string, redirect: string): string => {
     const key = `freebuff.session.${app.id}`;
-    return `<!doctype html><html><head><meta charset="utf-8"><title>Signed in</title></head>
-<body><p>Signed in. Redirecting…</p>
-<script>localStorage.setItem(${scriptJson(key)},${scriptJson(sessionToken)});location.replace(${scriptJson(redirect)});</script>
-</body></html>`;
+    return simplePage({
+      title: "Signed in",
+      heading: "Signed in",
+      message: "Redirecting you back to the app…",
+      script: `localStorage.setItem(${scriptJson(key)},${scriptJson(sessionToken)});location.replace(${scriptJson(redirect)});`,
+    });
   };
 
   return {
@@ -279,7 +333,16 @@ export const createWebApp = (
         if (parts[0] === "s" && parts.length >= 2 && request.method === "GET") {
           const app = options.store.findAppBySlug(decodeURIComponent(parts[1] ?? ""));
           if (app === undefined || app.status !== "deployed") {
-            return html(404, "<h1>App not found</h1>");
+            return html(
+              404,
+              simplePage({
+                title: "App not found",
+                heading: "App not found",
+                message: "This app is not published, or the link is out of date.",
+                linkHref: "/",
+                linkLabel: "Back to the builder",
+              }),
+            );
           }
           return serveBuild(app, parts.slice(2));
         }
@@ -668,7 +731,16 @@ export const createWebApp = (
               } catch (error) {
                 const message =
                   error instanceof AppError ? error.message : "Sign-in failed";
-                return html(401, `<h1>Sign-in failed</h1><p>${message.replace(/</g, "&lt;")}</p>`);
+                return html(
+                  401,
+                  simplePage({
+                    title: "Sign-in failed",
+                    heading: "Sign-in failed",
+                    message: message.replace(/</g, "&lt;"),
+                    linkHref: "/",
+                    linkLabel: "Back to the builder",
+                  }),
+                );
               }
             }
           }
