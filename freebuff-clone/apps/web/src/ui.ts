@@ -336,6 +336,8 @@ export const builderHtml = (options: {
   /* ---------- responsive ---------- */
   @media (max-width: 940px) {
     .grid { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 760px) {
     .nav-links { display: none; }
   }
   @media (max-width: 620px) {

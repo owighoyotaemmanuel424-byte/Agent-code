@@ -207,6 +207,11 @@ export const dashboardHtml = (options: {
     .brand-tag { display: none; }
     .panel { padding: 18px; }
     .endpoint { grid-template-columns: 58px minmax(0, 1fr); }
+    .header-inner { height: auto; min-height: 60px; flex-wrap: wrap; gap: 8px; padding: 10px 0; }
+    .header-spacer { display: none; }
+    .pill { margin-left: auto; max-width: 100%; white-space: normal; font-size: 11.5px; }
+    .pill code { overflow-wrap: anywhere; }
+    pre.snippet { white-space: pre-wrap; overflow-wrap: anywhere; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration: 0.001ms !important; } }
 </style>
