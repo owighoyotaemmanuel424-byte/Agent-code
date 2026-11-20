@@ -14,6 +14,7 @@ const alias: Record<string, string> = {
   "@freebuff/ads": packageEntry("ads"),
   "@freebuff/sandbox-orchestrator": packageEntry("sandbox-orchestrator"),
   "@freebuff/db": packageEntry("db"),
+  "@freebuff/sdk": packageEntry("sdk"),
 };
 
 export default defineConfig({

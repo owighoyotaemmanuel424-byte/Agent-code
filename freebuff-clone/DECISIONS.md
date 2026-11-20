@@ -156,3 +156,57 @@ reachable on the platform's own origin, not a public CDN URL.
 token per request, creates a private repo and pushes each file through the REST
 API (no git binary or shell), and never persists the token. The live push was
 tested against a local GitHub-compatible server.
+
+## D23 — One entitlement mapping per plan
+
+`resolveEntitlements(quota, plan)` returns hours, ad eligibility and premium
+model access together. Quota evaluation, the ad engine and model selection all
+read that one result, so no surface can assemble a contradictory combination
+("paid but still shown ads", "free with premium models"). `adsEnabled` is
+carried in every quota snapshot so a client can render the right state without
+inferring it.
+
+## D24 — Ads are served and accounted on the server
+
+`AdEngine.serve()` selects from validated configuration, records an impression
+and returns the decision in one call; paid plans get `undefined` and therefore
+no impression. Clicks are recorded separately. The engine only ever receives
+slot, plan, topic labels, surface and session id, and the persisted impression
+holds identifiers and a timestamp — never prompt text. The label is a Zod
+literal, and every renderer refuses inventory that lost it.
+
+## D25 — Phone verification is HMAC OTP, not an SMS dependency
+
+Phase 5 gates the free tier on a verified phone number without committing to a
+provider. Codes are six digits, bound to the account and number, stored as
+HMAC-SHA256, and limited by expiry, attempts and a resend cooldown. A
+`sendSms` callback is optional; when it is absent the code is returned to the
+caller as `delivery: "dev"`, which is the only supported path until an SMS
+provider is configured.
+
+## D26 — The paid tier sits behind `BillingProvider`
+
+`SubscriptionService` owns the free → paid transition and only applies events a
+provider verified. Two providers implement the boundary: `StripeBillingProvider`
+(REST checkout sessions plus HMAC-verified webhooks, no SDK) and
+`LocalBillingProvider` (no card, explicit completion route, enabled only with
+`FREEBUFF_ALLOW_LOCAL_BILLING=1`). Gravity returned no payments service for this
+stack, so Stripe is integrated directly; a second provider is a new
+implementation of the same interface.
+
+## D27 — Desktop is a local shell over the public SDK
+
+The desktop app renders account, quota, apps and one labelled sidebar slot, and
+sends builds through `@freebuff/sdk`. It owns no entitlement logic and holds no
+provider keys; the session token is read from the environment on the server and
+never rendered. Packaging compiles an unsigned binary with `bun build --compile`
+and prints the codesign/signtool steps rather than pretending to sign. Signed
+installers stay deferred until operator certificates exist.
+
+## D28 — Generated apps gained a nullable owner column in place
+
+Phase 4 apps had no owner. Phase 5 adds `owner_id` to the `apps` table with an
+in-place `ALTER TABLE` when the column is missing, plus an
+`(owner_id, created_at)` index. Legacy rows keep `NULL`, which the ownership
+check treats as unowned; new builds always write the verified account id, and
+listing/filtering happens in SQL.

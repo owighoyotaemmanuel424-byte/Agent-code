@@ -89,6 +89,15 @@ const json = (status: number, body: unknown): Response =>
 const html = (status: number, body: string): Response =>
   new Response(body, { status, headers: HTML_HEADERS });
 
+/** Unknown routes use the same error envelope as every other failure. */
+const notFound = (): Response =>
+  json(404, {
+    error: "not_found",
+    code: "not_found",
+    message: "Unknown route",
+    retryable: false,
+  });
+
 const statusFor = (error: AppError): number => {
   switch (error.code) {
     case "unauthorized":
@@ -496,7 +505,7 @@ export const createWebApp = (
             options.allowDevBilling !== true ||
             options.subscriptions === undefined
           ) {
-            return json(404, { error: "not_found", message: "Unknown route" });
+            return notFound();
           }
           const user = await requireUser(request);
           const body = await readJson(request);
@@ -513,7 +522,7 @@ export const createWebApp = (
         }
 
         if (parts[0] !== "api" || parts[1] !== "apps") {
-          return json(404, { error: "not_found", message: "Unknown route" });
+          return notFound();
         }
 
         if (parts.length === 2) {
@@ -755,7 +764,7 @@ export const createWebApp = (
           }
         }
 
-        return json(404, { error: "not_found", message: "Unknown route" });
+        return notFound();
       } catch (error) {
         if (error instanceof AppError) {
           return json(statusFor(error), {

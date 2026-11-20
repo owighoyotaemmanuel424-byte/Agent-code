@@ -1,6 +1,6 @@
 # Progress
 
-Updated: 2026-11-19
+Updated: 2026-11-20
 
 ## Phase status
 
@@ -11,7 +11,7 @@ Updated: 2026-11-19
 | 2 | CLI | **PASSED** | auth → picker → multi-file edit → terminal command → persisted history |
 | 3 | Cloud sandbox (Docker) | **PASSED with a stated limitation** | repo → reachable preview in ~0.6–1.0 s; tenant isolation enforced; container path not runnable here |
 | 4 | Web App Builder | **PASSED** | one prompt → deployed app with auth, real SQLite data, file storage, live URL, source eject |
-| 5 | Monetization, Desktop, hardening | not started | quota/ads/paid/signers/security |
+| 5 | Monetization, Desktop, hardening | **PASSED with a stated limitation** | labelled ads on every surface, verified free tier, quota 429, paid upgrade, public SDK, security review; signed installers deferred |
 
 ## Phase 4 gate results
 
@@ -67,24 +67,85 @@ the model picks an app spec, the platform scaffolds the app deterministically.
     auth/data/files APIs.
 - Tests: 9 DB unit tests, 2 eject unit tests, 1 full-stack gate test.
 
+## Phase 5 gate results
+
+Executed in `freebuff-clone/` on 2026-11-20:
+
+```text
+$ bun run lint       # eslint .        -> exit 0
+$ bun run typecheck  # tsc --noEmit    -> exit 0
+$ bun run test       # vitest run      -> 153 passed (26 files), exit 0
+```
+
+The gate (`tests/integration/phase5/gate.test.ts`, 140 ms) drives the real web
+surface through the public SDK; the review
+(`tests/integration/security/review.test.ts`, 59 ms) attacks it.
+
+| Gate requirement | Evidence |
+| --- | --- |
+| Labelled ads everywhere | landing HTML carries `class="sponsored-ad"` and the literal `Sponsored`; `/api/ads` returns `label: "Sponsored"` with a decision for free visitors and records an impression |
+| Verified free tier | unauthenticated build 401; signed-in unverified build 403 `verification_required`; wrong OTP 401; correct OTP flips `phoneVerified` |
+| Quota is server-authoritative | two builds charge the two free hours (1 h up front each); the third returns 429 `quota_exceeded` with the reset time |
+| Local-day reset, no rollover | next local day reports `consumedSecondsToday: 0` and a later `resetsAt` |
+| Paid tier | `POST /api/billing/checkout` → `dev/complete` activates `paid`; billing status records an active local subscription |
+| Paid entitlements | paid ads return `decision: null`; hours rise 2 → 8; the premium plan reaches the builder (`buildPlans` = `free, free, paid`) |
+| SDK as the public contract | sign-in, `me`, `quota`, phone, build, list, ads, billing all run through `FreebuffClient` |
+| Owner isolation | a second account sees zero apps and gets 403 on app detail and eject |
+
+## Delivered in Phase 5
+
+- `packages/quota`
+  - 25-country matrix with IANA zones (US 30 h free / 60 h paid, default 5/40).
+  - `resolveEntitlements` as the one plan → hours/ads/models mapping.
+  - `listCountryQuotas` and `validateQuotaMatrix` (duplicates, unknown zones).
+- `packages/ads`
+  - Cross-surface inventory (`cli.session`, `cli.startup`, `desktop.sidebar`,
+    `web.builder`, `cloud.dashboard`) parsed from configuration.
+  - `AdEngine` with impression and click accounting; paid plans never served.
+  - Plain-text, badge and escaped HTML renderers that fail closed without the
+    `Sponsored` label and mark links `rel="sponsored noopener noreferrer"`.
+- `packages/auth`
+  - Phone OTP: E.164 normalisation, HMAC storage, 5-minute expiry, 5 attempts,
+    60-second resend cooldown, dev or SMS delivery.
+  - `SubscriptionService` plus `BillingProvider`: Stripe REST checkout and
+    HMAC-verified webhooks, and a local dev provider behind a flag.
+- `apps/web`
+  - Routes for `/api/me`, `/api/quota`, magic links, phone, `/api/ads` and
+    billing; builds gated on session, phone verification and quota.
+  - SQLite quota, ad-event and subscription stores; `owner_id` added in place
+    and enforced for apps, data and files.
+  - Plan-aware model selection that prefers premium models on the paid tier.
+- `apps/cloud` and `apps/desktop`: labelled `cloud.dashboard` and
+  `desktop.sidebar` slots; desktop shell over the SDK with an unsigned
+  `bun build --compile` packaging script.
+- `packages/sdk`: the full public client (accounts, quota, phone, apps, rows,
+  files, eject, ads, billing) with Zod-validated responses and `AppError` codes.
+- `SECURITY.md`: boundaries, controls, the checks that pin them and the gaps.
+- Tests: 40 new tests (matrix, ad engine, phone, billing, model selection,
+  Phase 5 gate, security review).
+
 ## Known gaps
 
-- No live model credential is configured here, so the gate uses the scripted
-  test model. With a real key the same path runs against the provider.
-- Magic links are returned to the caller (`delivery: "dev"`); real email
-  delivery is not wired yet.
+- No live model credential is configured here, so gates use the scripted test
+  model. With a real key the same path runs against the provider.
+- Magic links and OTP codes are returned to the caller (`delivery: "dev"`); no
+  email or SMS provider is wired yet.
 - "Deployed" means published to this platform's hosting directory and served at
   its own URL — not a public CDN/object store. The `HostingAdapter` boundary is
   where that changes.
 - GitHub eject is implemented and tested against a local GitHub API; no live
   push ran (no token, and tokens are never stored).
-- Generated apps share the platform account namespace; there is no per-app user
-  table yet.
-- Docker container isolation from Phase 3 is still unverified here, and CI has
-  not executed on GitHub.
+- Stripe checkout and webhooks are implemented and tested against a local double;
+  no live Stripe account, price or webhook endpoint is configured.
+- There is no HTTP edge rate limiter; only per-number OTP cooldowns and attempt
+  caps exist. A deployment needs one in front of the API.
+- Docker container isolation from Phase 3 is still unverified here.
+- Desktop binaries are unsigned: signed macOS/Windows installers need
+  operator-owned certificates and were deferred by the user.
+- CI has not executed on GitHub for this branch; all results above are local.
 
 ## Next action
 
-Awaiting approval to start **Phase 5 — Monetization, Desktop, hardening**.
-Packaging signed macOS/Windows installers needs operator-owned certificates;
-every other Phase 5 item can be completed first.
+Phase 5 is complete apart from signed installers. Awaiting approval, then the
+remaining work is operational: certificates for signed builds, live Stripe keys,
+email/SMS delivery and an edge rate limiter.
