@@ -9,14 +9,29 @@ const client = new FreebuffClient({
   ...(token === undefined || token.length === 0 ? {} : { token }),
 });
 
+/** The platform streams NDJSON; the shell pipes it straight into a tile. */
+const buildStream = async (prompt: string): Promise<Response> =>
+  fetch(`${platformUrl}/api/apps/build`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token === undefined || token.length === 0
+        ? {}
+        : { authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
 const app = createDesktopApp({
   client,
   platformUrl,
+  buildStream,
   sessionId: process.env["FREEBUFF_DESKTOP_SESSION"] ?? "desktop-local",
 });
 
 const port = Number.parseInt(process.env["PORT"] ?? "3100", 10);
-const server = Bun.serve({ port, hostname: "127.0.0.1", fetch: app.fetch });
+const hostname = process.env["FREEBUFF_DESKTOP_HOST"] ?? "127.0.0.1";
+const server = Bun.serve({ port, hostname, fetch: app.fetch });
 
 const localUrl = `http://127.0.0.1:${String(server.port)}/`;
 process.stdout.write(

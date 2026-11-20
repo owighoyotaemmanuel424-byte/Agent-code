@@ -67,6 +67,52 @@ the model picks an app spec, the platform scaffolds the app deterministically.
     auth/data/files APIs.
 - Tests: 9 DB unit tests, 2 eject unit tests, 1 full-stack gate test.
 
+## Phase 5 UI (desktop workspaces)
+
+The desktop shell is a tiled window manager over the same platform API: three
+workspaces (`Build`, `History`, `Apps`), one to four agent sessions per
+workspace, each with its own live build stream.
+
+| Region | Content |
+| --- | --- |
+| Workspace switcher | `Build` / `History` / `Apps` tabs with session counts, rendered as links so the switcher works without JavaScript |
+| Tile header | title, status dot and label, `Open` and close controls |
+| Tile chrome | fixed 84 px slot: either the labelled sponsored row or a session meta line — never anything else |
+| Tile body | NDJSON build stream (`spec → scaffolded → schema → auth → deployed`), per-tile composer, or a live preview iframe in the `Apps` workspace |
+
+Tiling is `tiles.ts`: one full, two columns, one large plus two stacked, or a
+2×2 grid, with a 14 px gutter and a maximum of four sessions per workspace. The
+same module owns the ad rules for this surface (`validateWorkspaceChrome`), so
+the layout is refused at render time if an ad would sit on the paid plan, be
+duplicated, lose its label or overlap a stream.
+
+Streams are real: `POST /api/tiles/:id/build` proxies the platform's NDJSON build
+route through the shell's session token, appends one row per event to that
+tile's session, and keeps concurrent tiles separate. Without a streaming
+platform the shell replays the SDK timeline instead of faking progress.
+Finished sessions stay in `History`; `Apps` tiles render the deployed URL in an
+iframe.
+
+Gate evidence:
+
+- `tests/unit/desktop/tiles.test.ts` (7 tests) — tiling coverage and non-overlap
+  for 1–4 sessions; the reserved chrome slot and the stream starting below it;
+  **the ad-rotation layout-shift test**: rotating through every inventory ad
+  produces byte-identical rectangles (`toStrictEqual`), so rotation cannot move
+  a stream; ads refused for paid plans, duplicated slots, unlabelled markup and
+  more than four tiles; NDJSON parsing ignores junk; the store caps and keeps
+  history.
+- `tests/integration/desktop/ui.test.ts` — switcher tabs and `aria-current`;
+  tile chrome holding the single labelled ad while the stream segment and the
+  sidebar contain no sponsored markup; two tiles streaming two builds
+  concurrently to distinct deployed apps (6 rows each); the tile cap (409 for
+  JSON, a 303 with a notice for the form); `History` and `Apps` workspaces;
+  rotation returning the literal label at the reserved height; tile close;
+  inline script parses.
+- Browser check at 1440 and 390 CSS px with four tiles: one sponsored row, zero
+  ads inside any stream, no horizontal overflow, and after clicking
+  `↻ Next sponsored` every tile, chrome and stream rectangle was identical.
+
 ## Phase 5 gate results
 
 Executed in `freebuff-clone/` on 2026-11-20:

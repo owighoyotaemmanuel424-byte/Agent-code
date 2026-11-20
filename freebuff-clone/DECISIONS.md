@@ -259,3 +259,23 @@ groups) and rendered by two walkers: a plain-text renderer for headless CI and
 `--no-color`, and OpenTUI elements for the TUI. The structural rules are
 asserted against that tree, which is why the component-tree, label and
 layout-shift tests do not need a terminal.
+
+## D31 — Desktop tiling is data, and its only ad slot is tile chrome
+
+The desktop window manager builds its layout as rectangles (`apps/desktop/src/tiles.ts`)
+instead of letting CSS decide where things land. Each tile is
+`[header 46 px][chrome 84 px][stream rest]`, and the chrome slot exists whether
+or not it holds an ad, so rotating a sponsored row cannot change any rectangle.
+That makes the layout-shift rule an assertion on numbers: the rotation test
+compares `layoutWorkspace` output with `toStrictEqual` across the whole
+inventory. CSS mirrors the same numbers and the browser check confirmed them
+(chrome exactly 84 px, identical rects before and after rotation at 1440 and
+390).
+
+Ads appear only inside tile chrome, on the first tile of a workspace, and only
+on the free plan. `validateWorkspaceChrome` runs before the page is returned and
+refuses a paid-plan ad, a second slot, markup without the literal label, a
+chrome slot that changed height, or a stream region that starts above the
+chrome. The sidebar keeps account, quota and apps, and holds no ad, so the
+one-visible-ad rule (0012) is still satisfied per view.
+
